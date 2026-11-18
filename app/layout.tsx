@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AI Chatbot",
   description: "Chatbot AI berbasis Google Gemini dengan antarmuka modern dark mode",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

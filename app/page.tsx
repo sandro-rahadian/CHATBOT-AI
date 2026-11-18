@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
@@ -32,30 +33,36 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
         layout
         onHoverStart={() => setExpanded(true)}
         onHoverEnd={() => setExpanded(false)}
+        onClick={() => setExpanded((prev) => !prev)}
         animate={{
-          width: expanded ? 360 : 170,
-          height: expanded ? 50 : 40,
+          width: expanded ? 320 : 68,
+          height: expanded ? 48 : 42,
         }}
         transition={{
           type: "spring",
           stiffness: 400,
           damping: 30,
         }}
-        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none"
+        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#5865f2]/50"
       >
         <AnimatePresence mode="wait">
           {!expanded ? (
             <motion.div
               key="collapsed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 flex items-center justify-center px-5"
+              className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="text-sm font-medium text-[#f2f3f5] tracking-tight">
-                AI Chatbot
-              </span>
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7 object-contain drop-shadow"
+                priority
+              />
             </motion.div>
           ) : (
             <motion.div
@@ -64,12 +71,16 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 flex items-center justify-between px-5"
+              className="absolute inset-0 flex items-center justify-between px-4"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-[#f2f3f5] tracking-tight">
-                  AI Chatbot
-                </span>
+              <div className="flex items-center gap-2.5">
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 object-contain"
+                />
                 <span className="text-xs text-[#949ba4] font-mono">
                   Gemini 2.0
                 </span>
