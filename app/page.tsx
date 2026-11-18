@@ -177,11 +177,12 @@ function ChatBubble({ message }: { message: Message }) {
 // ─── ChatPage (default export) ────────────────────────────────────────────────
 
 const CHAT_PLACEHOLDERS = [
-  "Tanya sesuatu kepada AI...",
-  "Bagaimana cara kerja Gemini?",
-  "Jelaskan konsep machine learning",
-  "Tulis kode Python untuk reverse string",
-  "Apa itu Large Language Model?",
+  "Tanya seputar SMK Telkom Malang...",
+  "Apa saja jurusan di SMK Telkom Malang?",
+  "Bagaimana cara daftar PPDB siswa baru?",
+  "Siapa kepala sekolah SMK Telkom Malang?",
+  "Apa itu jurusan Pengembangan Gim (PG)?",
+  "Ekskul apa saja yang ada di Moklet?",
 ];
 
 export default function ChatPage() {
