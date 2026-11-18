@@ -8,7 +8,7 @@ export const TextGenerateEffect = ({
   words,
   className,
   filter = true,
-  duration = 0.4,
+  duration = 0.35,
   textClassName,
 }: {
   words: string;
@@ -28,8 +28,8 @@ export const TextGenerateEffect = ({
         filter: filter ? "blur(0px)" : "none",
       },
       {
-        duration: duration || 0.4,
-        delay: stagger(0.025),
+        duration: duration || 0.35,
+        delay: stagger(0.015),
       }
     );
   }, [scope.current, words, filter, duration]);
@@ -39,7 +39,7 @@ export const TextGenerateEffect = ({
 
     return lines.map((line, lineIdx) => {
       if (line.trim() === "") {
-        return <div key={`empty-${lineIdx}`} className="h-2.5" />;
+        return <div key={`empty-${lineIdx}`} className="h-2" />;
       }
 
       // Tokenize markdown bold (**...**), italic (*...*), inline code (`...`)
@@ -73,11 +73,8 @@ export const TextGenerateEffect = ({
               return (
                 <motion.span
                   key={`t-${lineIdx}-${tokenIdx}`}
-                  className={cn(
-                    "anim-span inline-block font-semibold px-2 py-0.5 my-0.5 rounded-lg text-white opacity-0",
-                    "bg-[#b8292e]/25 border border-[#b8292e]/50 shadow-[0_0_14px_rgba(184,41,46,0.35)]"
-                  )}
-                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                  className="anim-span inline font-bold text-white opacity-0"
+                  style={{ filter: filter ? "blur(6px)" : "none" }}
                 >
                   {token.content}
                 </motion.span>
@@ -88,8 +85,8 @@ export const TextGenerateEffect = ({
               return (
                 <motion.span
                   key={`t-${lineIdx}-${tokenIdx}`}
-                  className="anim-span italic text-[#e4e4e7] opacity-0 mx-0.5 inline-block"
-                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                  className="anim-span italic text-[#dbdee1] opacity-0 mx-0.5 inline"
+                  style={{ filter: filter ? "blur(6px)" : "none" }}
                 >
                   {token.content}
                 </motion.span>
@@ -100,8 +97,8 @@ export const TextGenerateEffect = ({
               return (
                 <motion.span
                   key={`t-${lineIdx}-${tokenIdx}`}
-                  className="anim-span font-mono text-xs bg-white/10 px-1.5 py-0.5 rounded border border-white/15 text-[#fca5a5] opacity-0 inline-block mx-0.5"
-                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                  className="anim-span font-mono text-xs bg-[#1e1f22] px-1.5 py-0.5 rounded border border-[#383a40] text-[#f2f3f5] opacity-0 inline-block mx-0.5"
+                  style={{ filter: filter ? "blur(6px)" : "none" }}
                 >
                   {token.content}
                 </motion.span>
@@ -119,8 +116,8 @@ export const TextGenerateEffect = ({
               return (
                 <motion.span
                   key={`w-${lineIdx}-${tokenIdx}-${partIdx}`}
-                  className="anim-span opacity-0 inline-block"
-                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                  className="anim-span opacity-0 inline-block text-[#dbdee1]"
+                  style={{ filter: filter ? "blur(6px)" : "none" }}
                 >
                   {part}
                 </motion.span>
