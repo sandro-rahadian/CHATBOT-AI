@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #313338;
-  --foreground: #dbdee1;
+  --background: #07080a;
+  --foreground: #f2f3f5;
+  --primary: #e30613;
+  --primary-hover: #b8292e;
+  --surface-1: #111317;
+  --surface-2: #181b21;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
 }
 
 @theme inline {
@@ -15,109 +21,47 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
 }
 
-/* ─── Beam SVG stroke animation ──────────────────────────────── */
-@keyframes beam-stroke {
-  0% {
-    stroke-dashoffset: 1200;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    stroke-dashoffset: 0;
-    opacity: 0;
-  }
+/* ─── Glassmorphism Utilities ────────────────────────────────── */
+.glass-panel {
+  background: rgba(17, 19, 23, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
-.beam-path {
-  stroke-dasharray: 1200;
-  stroke-dashoffset: 1200;
-  animation: beam-stroke linear infinite;
+.glass-pill {
+  background: rgba(17, 19, 23, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* ─── Sparkle / ambient particle twinkle ─────────────────────── */
-@keyframes twinkle {
-  0%, 100% {
-    opacity: 0.08;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(1.6);
-  }
+.glow-red {
+  box-shadow: 0 0 32px -4px rgba(227, 6, 19, 0.35);
 }
 
-/* ─── AI bubble shimmer border ───────────────────────────────── */
-@keyframes shimmer-border {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-.shimmer-border {
-  background: linear-gradient(
-    270deg,
-    rgba(99, 102, 241, 0.25),
-    rgba(139, 92, 246, 0.15),
-    rgba(99, 102, 241, 0.05),
-    rgba(139, 92, 246, 0.25)
-  );
-  background-size: 400% 400%;
-  animation: shimmer-border 6s ease infinite;
-}
-
-/* ─── Toast slide-in ─────────────────────────────────────────── */
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.toast-enter {
-  animation: toast-in 0.2s cubic-bezier(0, 0, 0.2, 1) forwards;
+.glow-red-sm {
+  box-shadow: 0 0 16px -2px rgba(227, 6, 19, 0.25);
 }
 
 /* ─── Scrollbar styling ───────────────────────────────────────── */
 .chat-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
+
 .chat-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .chat-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-}
-.chat-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
 }
 
-/* ─── Reduced motion ──────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .beam-path,
-  .shimmer-border,
-  .toast-enter {
-    animation: none !important;
-  }
-  * {
-    transition-duration: 0.01ms !important;
-  }
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }

@@ -13,17 +13,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Chatbot",
-  description: "Chatbot AI berbasis Google Gemini dengan antarmuka modern dark mode",
+  title: "Moka — Moklet Assistant | Asisten AI Resmi SMK Telkom Malang",
+  description:
+    "Beyond Smart. Beyond Fast. Temui Moka, asisten AI resmi SMK Telkom Malang ditenagai basis data terverifikasi dan Google Gemini.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} dark scroll-smooth h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#313338] text-[#dbdee1]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#07080a] text-[#f2f3f5] selection:bg-[#e30613]/30 selection:text-white">
+        {children}
+      </body>
     </html>
   );
 }
