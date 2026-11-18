@@ -35,8 +35,8 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
         onHoverEnd={() => setExpanded(false)}
         onClick={() => setExpanded((prev) => !prev)}
         animate={{
-          width: expanded ? 320 : 68,
-          height: expanded ? 48 : 42,
+          width: expanded ? 330 : 46,
+          height: 46,
         }}
         transition={{
           type: "spring",
@@ -57,10 +57,10 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
             >
               <Image
                 src="/logo.png"
-                alt="Logo"
+                alt="Moklet Assistant"
                 width={28}
                 height={28}
-                className="w-7 h-7 object-contain drop-shadow"
+                className="w-7 h-7 object-contain drop-shadow rounded-full"
                 priority
               />
             </motion.div>
@@ -76,13 +76,13 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               <div className="flex items-center gap-2.5">
                 <Image
                   src="/logo.png"
-                  alt="Logo"
+                  alt="Moklet Assistant"
                   width={24}
                   height={24}
-                  className="w-6 h-6 object-contain"
+                  className="w-6 h-6 object-contain rounded-full"
                 />
-                <span className="text-xs text-[#949ba4] font-mono">
-                  Gemini 2.0
+                <span className="text-xs sm:text-sm font-semibold text-[#f2f3f5] tracking-tight">
+                  Moklet Assistant
                 </span>
               </div>
               <HoverBorderGradient
@@ -380,7 +380,7 @@ export default function ChatPage() {
                 ? "AI sedang mengetik..."
                 : messages.length > 0
                 ? `${messages.length} pesan · Tekan Enter untuk kirim`
-                : "Tekan Enter untuk kirim · Gemini 2.0 Flash"}
+                : "Tekan Enter untuk kirim · Moklet Assistant"}
             </p>
           </div>
         </div>

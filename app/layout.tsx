@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Chatbot",
-  description: "Chatbot AI berbasis Google Gemini dengan antarmuka modern dark mode",
+  title: "Moklet Assistant | AI Chatbot SMK Telkom Malang",
+  description: "Asisten AI resmi SMK Telkom Malang berbasis Google Gemini",
   icons: {
     icon: [
       { url: "/favicon.ico" },
