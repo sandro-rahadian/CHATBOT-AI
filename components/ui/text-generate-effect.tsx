@@ -1,5 +1,6 @@
 "use client";
-import { useEffect } from "react";
+
+import React, { useEffect } from "react";
 import { motion, stagger, useAnimate } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +8,7 @@ export const TextGenerateEffect = ({
   words,
   className,
   filter = true,
-  duration = 0.5,
+  duration = 0.4,
   textClassName,
 }: {
   words: string;
@@ -17,58 +18,124 @@ export const TextGenerateEffect = ({
   textClassName?: string;
 }) => {
   const [scope, animate] = useAnimate();
-  let wordsArray = words.split(" ");
 
   useEffect(() => {
     if (!scope.current) return;
     animate(
-      "span",
+      "span.anim-span",
       {
         opacity: 1,
         filter: filter ? "blur(0px)" : "none",
       },
       {
-        duration: duration ? duration : 1,
-        delay: stagger(0.2),
+        duration: duration || 0.4,
+        delay: stagger(0.025),
       }
     );
-  }, [scope.current, words]);
+  }, [scope.current, words, filter, duration]);
 
-  const renderWords = () => {
-    return (
-      <motion.div ref={scope} className="inline">
-        {wordsArray.map((word, idx) => {
-          return (
-            <motion.span
-              key={word + idx}
-              className={cn(
-                textClassName ? textClassName : "dark:text-white text-black",
-                "opacity-0"
-              )}
-              style={{
-                filter: filter ? "blur(10px)" : "none",
-              }}
-            >
-              {word}{" "}
-            </motion.span>
-          );
-        })}
-      </motion.div>
-    );
+  const renderLines = () => {
+    const lines = words.split("\n");
+
+    return lines.map((line, lineIdx) => {
+      if (line.trim() === "") {
+        return <div key={`empty-${lineIdx}`} className="h-2.5" />;
+      }
+
+      // Tokenize markdown bold (**...**), italic (*...*), inline code (`...`)
+      const tokens: { type: "bold" | "italic" | "code" | "text"; content: string }[] = [];
+      const regex = /(\*\*(?:[^*]+|\*(?!\*))+\*\*|\*(?:[^*]+)\*|`[^`]+`)/g;
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+
+      while ((match = regex.exec(line)) !== null) {
+        if (match.index > lastIndex) {
+          tokens.push({ type: "text", content: line.slice(lastIndex, match.index) });
+        }
+        const raw = match[0];
+        if (raw.startsWith("**") && raw.endsWith("**")) {
+          tokens.push({ type: "bold", content: raw.slice(2, -2) });
+        } else if (raw.startsWith("*") && raw.endsWith("*")) {
+          tokens.push({ type: "italic", content: raw.slice(1, -1) });
+        } else if (raw.startsWith("`") && raw.endsWith("`")) {
+          tokens.push({ type: "code", content: raw.slice(1, -1) });
+        }
+        lastIndex = regex.lastIndex;
+      }
+      if (lastIndex < line.length) {
+        tokens.push({ type: "text", content: line.slice(lastIndex) });
+      }
+
+      return (
+        <div key={`line-${lineIdx}`} className="my-0.5 leading-relaxed">
+          {tokens.map((token, tokenIdx) => {
+            if (token.type === "bold") {
+              return (
+                <motion.span
+                  key={`t-${lineIdx}-${tokenIdx}`}
+                  className={cn(
+                    "anim-span inline-block font-semibold px-2 py-0.5 my-0.5 rounded-lg text-white opacity-0",
+                    "bg-[#b8292e]/25 border border-[#b8292e]/50 shadow-[0_0_14px_rgba(184,41,46,0.35)]"
+                  )}
+                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                >
+                  {token.content}
+                </motion.span>
+              );
+            }
+
+            if (token.type === "italic") {
+              return (
+                <motion.span
+                  key={`t-${lineIdx}-${tokenIdx}`}
+                  className="anim-span italic text-[#e4e4e7] opacity-0 mx-0.5 inline-block"
+                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                >
+                  {token.content}
+                </motion.span>
+              );
+            }
+
+            if (token.type === "code") {
+              return (
+                <motion.span
+                  key={`t-${lineIdx}-${tokenIdx}`}
+                  className="anim-span font-mono text-xs bg-white/10 px-1.5 py-0.5 rounded border border-white/15 text-[#fca5a5] opacity-0 inline-block mx-0.5"
+                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                >
+                  {token.content}
+                </motion.span>
+              );
+            }
+
+            // Normal text words
+            const parts = token.content.split(/(\s+)/);
+            return parts.map((part, partIdx) => {
+              if (part === "") return null;
+              if (/^\s+$/.test(part)) {
+                return <span key={`s-${lineIdx}-${tokenIdx}-${partIdx}`}>{part}</span>;
+              }
+
+              return (
+                <motion.span
+                  key={`w-${lineIdx}-${tokenIdx}-${partIdx}`}
+                  className="anim-span opacity-0 inline-block"
+                  style={{ filter: filter ? "blur(8px)" : "none" }}
+                >
+                  {part}
+                </motion.span>
+              );
+            });
+          })}
+        </div>
+      );
+    });
   };
 
   return (
-    <div className={cn("font-bold", className)}>
-      <div className={cn(textClassName ? "mt-0" : "mt-4")}>
-        <div
-          className={cn(
-            textClassName
-              ? textClassName
-              : "dark:text-white text-black text-2xl leading-snug tracking-wide"
-          )}
-        >
-          {renderWords()}
-        </div>
+    <div className={cn("font-normal", className)}>
+      <div ref={scope} className={cn("leading-relaxed", textClassName)}>
+        {renderLines()}
       </div>
     </div>
   );
