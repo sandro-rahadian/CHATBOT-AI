@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createApp, toGeminiContents } from "../server.js";
+import { createApp, toGeminiContents, loadKnowledgeBase, buildSystemPrompt } from "../server.js";
 
 let server, base, lastContents;
 
@@ -195,3 +195,19 @@ test("retries=0 menonaktifkan coba ulang", async () => {
     { retries: 0 }
   );
 });
+
+test("loadKnowledgeBase membaca data.md dan mengembalikan entri pengetahuan", () => {
+  const items = loadKnowledgeBase();
+  assert.ok(Array.isArray(items));
+  assert.equal(items.length, 21);
+  assert.ok(items.some((i) => i.title.includes("SMK Telkom Malang")));
+});
+
+test("buildSystemPrompt menyusun instruksi ketat dengan database pengetahuan", () => {
+  const prompt = buildSystemPrompt();
+  assert.ok(prompt.includes("SMK Telkom Malang"));
+  assert.ok(prompt.includes("ATURAN UTAMA (SANGAT KETAT)"));
+  assert.ok(prompt.includes("0812-2348-8999"));
+  assert.ok(prompt.includes("DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG"));
+});
+

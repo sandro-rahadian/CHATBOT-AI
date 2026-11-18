@@ -4,6 +4,14 @@ Sesuai dokumen teknis v1.0.0. Port `3001`, endpoint `POST /chat`.
 
 > **Catatan:** dokumen teknis menyebut model `gemini-2.0-flash`, tetapi model itu sudah tidak tersedia untuk akun baru. Backend ini memakai `gemini-3.1-flash-lite` sebagai default dan bisa diganti lewat `GEMINI_MODEL`.
 
+## Database Pengetahuan (`data.md`)
+
+Backend ini menggunakan basis pengetahuan resmi dari file `data.md` (format JSON) untuk menjawab pertanyaan seputar **SMK Telkom Malang (Moklet)**.
+- Gemini diinstruksikan secara ketat untuk **hanya** menjawab berdasarkan fakta di database `data.md` dan tidak mengarang/berhalusinasi.
+- Jika pengguna menanyakan hal umum di luar SMK Telkom Malang, AI akan menolak dengan sopan.
+- Jika pengguna menanyakan info yang belum tercatat (misalnya rincian nominal biaya pendaftaran/SPP), AI akan menyampaikan informasi belum tersedia dan mengarahkan ke kanal resmi sekolah (Call Center / WA `0812-2348-8999`, web `ppdb.smktelkom-mlg.sch.id`).
+- Anda dapat memperbarui atau menambah entri baru langsung di `data.md`.
+
 ## Menjalankan
 
 ```bash

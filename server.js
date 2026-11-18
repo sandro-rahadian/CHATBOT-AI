@@ -4,7 +4,8 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { pathToFileURL } from "node:url";
+import fs from "node:fs";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 dotenv.config();
 
@@ -15,16 +16,87 @@ const TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 15000; // batas tung
 const parsedRetries = Number.parseInt(process.env.GEMINI_MAX_RETRIES ?? "", 10);
 const MAX_RETRIES = Number.isNaN(parsedRetries) ? 2 : Math.max(0, parsedRetries); // coba ulang saat Gemini sibuk
 const RETRY_DELAY_MS = 1000; // jeda dasar: 1 dtk, lalu 2 dtk, dst.
-const SYSTEM_INSTRUCTION =
-  process.env.SYSTEM_PROMPT ||
-  "Kamu adalah asisten AI yang ramah dan membantu. Jawab dalam Bahasa Indonesia kecuali user bertanya dalam bahasa lain.";
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:3000")
+
+const rawOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000")
   .split(",")
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/\/$/, ""))
   .filter(Boolean);
+
+export const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, "");
+    if (rawOrigins.includes("*") || rawOrigins.includes(normalized)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+  credentials: true,
+};
 
 const MAX_MESSAGE_LENGTH = 4000; // karakter per pesan
 const MAX_HISTORY = 30; // jumlah pesan history terakhir yang dikirim ke Gemini
+
+// ---------- Knowledge Base & System Instruction ----------
+/**
+ * Membaca data.md (berisi JSON basis pengetahuan SMK Telkom Malang).
+ */
+export function loadKnowledgeBase() {
+  try {
+    const dataPath = fileURLToPath(new URL("./data.md", import.meta.url));
+    if (fs.existsSync(dataPath)) {
+      const raw = fs.readFileSync(dataPath, "utf8");
+      const items = JSON.parse(raw);
+      if (Array.isArray(items)) {
+        return items;
+      }
+    }
+  } catch (err) {
+    console.warn("[KnowledgeBase] Gagal memuat data.md:", err?.message ?? err);
+  }
+  return [];
+}
+
+/**
+ * Menyusun system prompt yang membatasi jawaban Gemini HANYA berdasarkan database data.md.
+ */
+export function buildSystemPrompt() {
+  if (process.env.SYSTEM_PROMPT) {
+    return process.env.SYSTEM_PROMPT;
+  }
+
+  const items = loadKnowledgeBase();
+  let knowledgeSection = "";
+
+  if (items.length > 0) {
+    const formatted = items
+      .map(
+        (item, idx) =>
+          `[Data ${idx + 1}] Kategori: ${item.category} | Judul: ${item.title}\nIsi: ${item.content}`
+      )
+      .join("\n\n");
+
+    knowledgeSection = `\n=== DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG ===\n${formatted}\n====================================================\n`;
+  }
+
+  return `Kamu adalah asisten AI resmi untuk SMK Telkom Malang (Moklet). Tugasmu adalah memberikan informasi yang akurat, ramah, dan solutif seputar SMK Telkom Malang kepada calon siswa, siswa, orang tua, dan masyarakat umum.
+
+ATURAN UTAMA (SANGAT KETAT):
+1. SUMBER INFORMASI TUNGGAL: Jawablah pertanyaan HANYA berdasarkan fakta yang tertulis di dalam "DATABASE PENGETAHUAN RESMI" di bawah.
+2. TIDAK BOLEH MENGARANG: JANGAN pernah mengarang, berspekulasi, berhalusinasi, atau menggunakan informasi di luar database resmi ini.
+3. PERTANYAAN DI LUAR DATABASE ATAU DATA BELUM TERSEDIA:
+   - Jika pengguna menanyakan hal umum yang tidak relevan dengan SMK Telkom Malang (misalnya resep masakan, cuaca kota lain, tugas coding umum, politik, dll.), tolak dengan santun dan jelaskan bahwa kamu adalah asisten khusus SMK Telkom Malang.
+   - Jika pengguna menanyakan info tentang SMK Telkom Malang tetapi datanya belum ada di database (misalnya rincian nominal biaya masuk/SPP yang belum tertera): sampaikan bahwa informasi resmi tersebut belum tersedia di data kami, lalu arahkan untuk menghubungi kontak resmi:
+     * Call Center / WhatsApp: 0812-2348-8999
+     * Telepon Kantor: 0341-712500
+     * Email: info@smktelkom-mlg.sch.id
+     * Website: smktelkom-mlg.sch.id / ppdb.smktelkom-mlg.sch.id
+     * Instagram & TikTok: @smktelkommalang
+     * Jam Layanan: Senin - Sabtu pukul 06.00 - 16.00 WIB (Minggu tutup)
+4. GAYA BAHASA: Santun, ramah, jelas, dan profesional dalam Bahasa Indonesia. Boleh menggunakan poin-poin agar mudah dibaca.
+5. NATURAL: Jangan menyebutkan kata-kata teknis seperti "berdasarkan database di atas" atau "menurut prompt sistem". Jawablah langsung secara alami sebagai asisten sekolah resmi.
+${knowledgeSection}`;
+}
 
 // ---------- Helper ----------
 /**
@@ -75,11 +147,11 @@ export function toGeminiContents(history, message) {
 }
 
 /** Pembungkus Gemini SDK dengan timeout. Dipisah supaya mudah di-mock saat testing. */
-export function createGeminiGenerator() {
+export function createGeminiGenerator(systemInstruction = buildSystemPrompt()) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({
     model: MODEL_NAME,
-    systemInstruction: SYSTEM_INSTRUCTION,
+    systemInstruction,
   });
 
   return async (contents) => {
@@ -145,7 +217,7 @@ export function toClientError(err) {
 export function createApp({ generate, retries = MAX_RETRIES, retryDelayMs = RETRY_DELAY_MS }) {
   const app = express();
 
-  app.use(cors({ origin: ALLOWED_ORIGINS }));
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: "100kb" }));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -212,6 +284,7 @@ if (isMain) {
   app.listen(PORT, () => {
     console.log(`Backend berjalan di http://localhost:${PORT} (model: ${MODEL_NAME})`);
     console.log(`Timeout ${TIMEOUT_MS} ms, coba ulang maks ${MAX_RETRIES}x`);
-    console.log(`CORS diizinkan untuk: ${ALLOWED_ORIGINS.join(", ")}`);
+    console.log(`CORS diizinkan untuk: ${rawOrigins.join(", ")}`);
+    console.log(`Database pengetahuan data.md: ${loadKnowledgeBase().length} entri dimuat.`);
   });
 }
