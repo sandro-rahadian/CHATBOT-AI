@@ -43,7 +43,7 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
           stiffness: 400,
           damping: 30,
         }}
-        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#5865f2]/50"
+        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#4e5058]"
       >
         <AnimatePresence mode="wait">
           {!expanded ? (
@@ -373,15 +373,6 @@ export default function ChatPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Status hint */}
-            <p className="text-center text-[10px] text-[#949ba4] mt-2 font-mono">
-              {isLoading
-                ? "AI sedang mengetik..."
-                : messages.length > 0
-                ? `${messages.length} pesan · Tekan Enter untuk kirim`
-                : "Tekan Enter untuk kirim · Moklet Assistant"}
-            </p>
           </div>
         </div>
       </div>
