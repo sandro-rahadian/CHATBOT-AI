@@ -43,8 +43,10 @@ const MAX_HISTORY = 30; // jumlah pesan history terakhir yang dikirim ke Gemini
  */
 export function loadKnowledgeBase() {
   try {
-    const dataPath = fileURLToPath(new URL("./data.md", import.meta.url));
-    if (fs.existsSync(dataPath)) {
+    const mdPath = fileURLToPath(new URL("./data.md", import.meta.url));
+    const jsonPath = fileURLToPath(new URL("./data.json", import.meta.url));
+    const dataPath = fs.existsSync(mdPath) ? mdPath : fs.existsSync(jsonPath) ? jsonPath : null;
+    if (dataPath) {
       const raw = fs.readFileSync(dataPath, "utf8");
       const items = JSON.parse(raw);
       if (Array.isArray(items)) {
@@ -52,7 +54,7 @@ export function loadKnowledgeBase() {
       }
     }
   } catch (err) {
-    console.warn("[KnowledgeBase] Gagal memuat data.md:", err?.message ?? err);
+    console.warn("[KnowledgeBase] Gagal memuat database:", err?.message ?? err);
   }
   return [];
 }
