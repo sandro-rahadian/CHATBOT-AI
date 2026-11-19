@@ -12,6 +12,7 @@ import {
   ModalFooter,
 } from "@/components/ui/animated-modal";
 import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
+import { ToastStack, useToastStack, type ToastItem } from "@/components/toast-stack/toast-stack";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +205,11 @@ export default function ChatPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Nexus Toast Stack Hook
+  const { toasts, push: pushToast, dismiss: dismissToast, clear: clearToasts } = useToastStack([], {
+    enableSound: true,
+  });
+
   // Auto-scroll to bottom whenever messages or loading state changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -262,6 +268,15 @@ export default function ChatPage() {
       const msg =
         err instanceof Error ? err.message : "Gagal terhubung ke server.";
       setError(msg);
+      pushToast(
+        {
+          title: "Gagal Mengirim Pesan",
+          description: msg,
+          type: "error",
+          action: { label: "Coba Lagi" },
+        },
+        { sound: true }
+      );
     } finally {
       setIsLoading(false);
     }
@@ -282,12 +297,44 @@ export default function ChatPage() {
     setMessages([]);
     setShowConfirm(false);
     setError(null);
+    pushToast(
+      {
+        title: "Percakapan Dibersihkan",
+        description: "Semua pesan sesi ini telah dihapus.",
+        type: "info",
+      },
+      { sound: true }
+    );
   };
 
   return (
     <div className="relative flex flex-col h-screen bg-[#313338] text-[#dbdee1] overflow-hidden">
       {/* Dynamic Island Nav */}
       <DynamicIslandNav onClear={() => setShowConfirm(true)} />
+
+      {/* Nexus Toast Stack (Placed right under the notch) */}
+      <div className="fixed top-[74px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+        <div className="pointer-events-auto">
+          <ToastStack
+            toasts={toasts}
+            onDismiss={dismissToast}
+            onAction={(t) => {
+              if (t.type === "error" && messages.length > 0) {
+                const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+                if (lastUserMsg) {
+                  handleSend(lastUserMsg.content);
+                }
+              }
+            }}
+            position="top"
+            expand="hover"
+            max={3}
+            width={350}
+            duration={5000}
+            enableSound={true}
+          />
+        </div>
+      </div>
 
       {/* Aceternity Animated Modal for Confirmation */}
       <Modal open={showConfirm} setOpen={setShowConfirm}>
