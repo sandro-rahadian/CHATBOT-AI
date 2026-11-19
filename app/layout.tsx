@@ -13,15 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Moklet Assistant | AI Chatbot SMK Telkom Malang",
-  description: "Asisten AI resmi SMK Telkom Malang berbasis Google Gemini",
+  title: "KeraVokasi | Asisten AI SMK Malang",
+  description: "Asisten AI resmi seputar sekolah kejuruan SMK di Malang",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/logo.png", type: "image/png" },
+      { url: "/logo.png?v=2", type: "image/png" },
+      { url: "/favicon.ico?v=2" },
     ],
     apple: [
-      { url: "/apple-icon.png" },
+      { url: "/apple-icon.png?v=2" },
     ],
   },
 };

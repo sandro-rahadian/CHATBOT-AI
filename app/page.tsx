@@ -35,7 +35,7 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
         onHoverEnd={() => setExpanded(false)}
         onClick={() => setExpanded((prev) => !prev)}
         animate={{
-          width: expanded ? 320 : 200,
+          width: expanded ? 290 : 155,
           height: 44,
         }}
         transition={{
@@ -57,14 +57,14 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
             >
               <Image
                 src="/logo.png"
-                alt="Seputar SMK Malang"
+                alt="KeraVokasi"
                 width={26}
                 height={26}
                 className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
                 priority
               />
               <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
-                Seputar SMK Malang
+                KeraVokasi
               </span>
             </motion.div>
           ) : (
@@ -79,13 +79,13 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               <div className="flex items-center gap-2.5">
                 <Image
                   src="/logo.png"
-                  alt="Seputar SMK Malang"
+                  alt="KeraVokasi"
                   width={26}
                   height={26}
                   className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
                 />
                 <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
-                  Seputar SMK Malang
+                  KeraVokasi
                 </span>
               </div>
               <HoverBorderGradient
