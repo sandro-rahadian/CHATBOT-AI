@@ -35,7 +35,7 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
         onHoverEnd={() => setExpanded(false)}
         onClick={() => setExpanded((prev) => !prev)}
         animate={{
-          width: expanded ? 320 : 180,
+          width: expanded ? 320 : 200,
           height: 44,
         }}
         transition={{
@@ -53,9 +53,16 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.15 }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2.5"
             >
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <Image
+                src="/logo.png"
+                alt="Seputar SMK Malang"
+                width={26}
+                height={26}
+                className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
+                priority
+              />
               <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
                 Seputar SMK Malang
               </span>
@@ -69,8 +76,14 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               transition={{ duration: 0.15 }}
               className="w-full flex items-center justify-between"
             >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-2.5">
+                <Image
+                  src="/logo.png"
+                  alt="Seputar SMK Malang"
+                  width={26}
+                  height={26}
+                  className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
+                />
                 <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
                   Seputar SMK Malang
                 </span>
