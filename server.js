@@ -4,6 +4,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import mysql from "mysql2/promise";
 import fs from "node:fs";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
@@ -38,10 +39,61 @@ const MAX_MESSAGE_LENGTH = 4000; // karakter per pesan
 const MAX_HISTORY = 30; // jumlah pesan history terakhir yang dikirim ke Gemini
 
 // ---------- Knowledge Base & System Instruction ----------
+let cachedKnowledgeItems = null;
+
 /**
- * Membaca data.md (berisi JSON basis pengetahuan SMK Telkom Malang).
+ * Membuat connection pool ke database MySQL online (Railway/Cloud).
+ */
+export function getDbPool() {
+  const url = process.env.MYSQL_URL || process.env.DATABASE_URL;
+  if (url) {
+    return mysql.createPool(url);
+  }
+  if (process.env.MYSQLHOST || process.env.DB_HOST) {
+    return mysql.createPool({
+      host: process.env.MYSQLHOST || process.env.DB_HOST,
+      user: process.env.MYSQLUSER || process.env.DB_USER || "root",
+      password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
+      database: process.env.MYSQLDATABASE || process.env.DB_NAME || "chatbot_sekolah",
+      port: Number(process.env.MYSQLPORT || process.env.DB_PORT) || 3306,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      connectTimeout: 5000,
+    });
+  }
+  return null;
+}
+
+/**
+ * Mengambil data terbaru dari MySQL database online (chatbot_sekolah).
+ */
+export async function fetchKnowledgeFromDb() {
+  const pool = getDbPool();
+  if (!pool) return null;
+  try {
+    const [rows] = await pool.query(`
+      SELECT k.id, k.category, k.title, k.content, k.keywords, s.name AS school_name
+      FROM knowledge k
+      LEFT JOIN schools s ON k.school_id = s.id
+      ORDER BY k.id ASC
+    `);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows;
+    }
+  } catch (err) {
+    console.warn("[MySQL] Gagal mengambil data dari database online:", err?.message ?? err);
+  }
+  return null;
+}
+
+/**
+ * Membaca data.md / data.json (berisi JSON basis pengetahuan SMK Telkom Malang).
  */
 export function loadKnowledgeBase() {
+  if (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) {
+    return cachedKnowledgeItems;
+  }
   try {
     const mdPath = fileURLToPath(new URL("./data.md", import.meta.url));
     const jsonPath = fileURLToPath(new URL("./data.json", import.meta.url));
@@ -224,6 +276,17 @@ export function createApp({ generate, retries = MAX_RETRIES, retryDelayMs = RETR
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
+  // POST /sync - Memperbarui cache dari MySQL online tanpa restart
+  app.post("/sync", async (_req, res) => {
+    const dbItems = await fetchKnowledgeFromDb();
+    if (dbItems && dbItems.length > 0) {
+      cachedKnowledgeItems = dbItems;
+      return res.json({ status: "ok", count: dbItems.length, source: "mysql" });
+    }
+    const localItems = loadKnowledgeBase();
+    return res.json({ status: "fallback", count: localItems.length, source: "local" });
+  });
+
   const chatLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 20, // 20 request / menit / IP
@@ -283,10 +346,18 @@ if (isMain) {
     process.exit(1);
   }
   const app = createApp({ generate: createGeminiGenerator() });
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`Backend berjalan di http://localhost:${PORT} (model: ${MODEL_NAME})`);
     console.log(`Timeout ${TIMEOUT_MS} ms, coba ulang maks ${MAX_RETRIES}x`);
     console.log(`CORS diizinkan untuk: ${rawOrigins.join(", ")}`);
-    console.log(`Database pengetahuan data.md: ${loadKnowledgeBase().length} entri dimuat.`);
+
+    // Coba sambungkan ke database MySQL online (Railway)
+    const dbItems = await fetchKnowledgeFromDb();
+    if (dbItems && dbItems.length > 0) {
+      cachedKnowledgeItems = dbItems;
+      console.log(`Database pengetahuan MySQL Online: ${dbItems.length} entri dimuat.`);
+    } else {
+      console.log(`Database pengetahuan fallback (data.md): ${loadKnowledgeBase().length} entri dimuat.`);
+    }
   });
 }
