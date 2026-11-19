@@ -227,7 +227,7 @@ export default function ChatPage() {
     try {
       const apiBase =
         process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-        "https://production-b22e59af.up.railway.app";
+        "https://chatbot-ai-production-b22e59af.up.railway.app";
       const response = await fetch(`${apiBase}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
