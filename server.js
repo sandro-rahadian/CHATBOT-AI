@@ -18,7 +18,7 @@ const parsedRetries = Number.parseInt(process.env.GEMINI_MAX_RETRIES ?? "", 10);
 const MAX_RETRIES = Number.isNaN(parsedRetries) ? 2 : Math.max(0, parsedRetries); // coba ulang saat Gemini sibuk
 const RETRY_DELAY_MS = 1000; // jeda dasar: 1 dtk, lalu 2 dtk, dst.
 
-const rawOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000")
+const rawOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000,https://keravokasi.my.id,https://www.keravokasi.my.id")
   .split(",")
   .map((s) => s.trim().replace(/\/$/, ""))
   .filter(Boolean);
@@ -27,7 +27,12 @@ export const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const normalized = origin.replace(/\/$/, "");
-    if (rawOrigins.includes("*") || rawOrigins.includes(normalized)) {
+    if (
+      rawOrigins.includes("*") ||
+      rawOrigins.includes(normalized) ||
+      normalized.endsWith(".vercel.app") ||
+      normalized.endsWith("keravokasi.my.id")
+    ) {
       return callback(null, true);
     }
     return callback(null, false);
