@@ -1,0 +1,2117 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moklet Assistant (Moka) — Design Prototype & System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── RESET & DESIGN TOKENS ─── */
+    :root {
+      --surface-void: #07080A;
+      --surface-obsidian: #0A0C10;
+      --surface-panel: #0E1118;
+      --surface-tile: #131722;
+      --surface-tile-hover: #191E2C;
+      --surface-composer: rgba(14, 17, 24, 0.88);
+
+      --moklet-red: #E30613;
+      --moklet-red-hover: #FF2E3B;
+      --moklet-red-subtle: rgba(227, 6, 19, 0.12);
+      --moklet-red-border: rgba(227, 6, 19, 0.35);
+      --moklet-red-glow: rgba(227, 6, 19, 0.28);
+
+      --chrome-silver: #E2E8F0;
+      --chrome-muted: #94A3B8;
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-medium: rgba(255, 255, 255, 0.12);
+      --border-active: rgba(255, 255, 255, 0.25);
+
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --status-success: #10B981;
+      --status-warning: #F59E0B;
+      --status-danger: #EF4444;
+
+      --sidebar-width: 270px;
+      --topbar-height: 64px;
+      --font-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--surface-void);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* ─── BACKGROUND AMBIENT GLOW ─── */
+    .ambient-glow {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1200px;
+      height: 700px;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(227, 6, 19, 0.09) 0%, transparent 65%),
+        radial-gradient(circle at 75% 25%, rgba(14, 165, 233, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 40%);
+      filter: blur(60px);
+    }
+
+    /* ─── SIDEBAR (LEFT RAIL) ─── */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--surface-obsidian);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      flex-shrink: 0;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      padding: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(227, 6, 19, 0.25);
+      flex-shrink: 0;
+    }
+
+    .brand-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-text h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-text h1 span.badge-beta {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      background: var(--moklet-red-subtle);
+      color: var(--moklet-red-hover);
+      border: 1px solid var(--moklet-red-border);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .btn-icon-toggle {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+
+    /* ── Navigation Menu ── */
+    .nav-section {
+      padding: 16px 14px 8px;
+    }
+
+    .nav-label {
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0 10px 8px;
+    }
+
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .nav-item button:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+    }
+
+    .nav-item button.active {
+      background: linear-gradient(90deg, rgba(227, 6, 19, 0.16) 0%, rgba(255, 255, 255, 0.03) 100%);
+      border: 1px solid var(--moklet-red-border);
+      color: #FFFFFF;
+      box-shadow: 0 4px 15px -4px rgba(227, 6, 19, 0.35);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    .nav-item button.active svg {
+      opacity: 1;
+      stroke: var(--moklet-red-hover);
+    }
+
+    .nav-count {
+      margin-left: auto;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 1px 7px;
+      border-radius: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Recent Inquiries in Sidebar ── */
+    .history-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px;
+    }
+
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+    }
+    .history-item span.time {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: #475569;
+    }
+
+    /* ── Sidebar Footer Card ── */
+    .sidebar-footer {
+      padding: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .super-card {
+      background: linear-gradient(145deg, rgba(227, 6, 19, 0.08) 0%, rgba(19, 23, 34, 0.6) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .super-card h4 {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .super-card p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* ─── MAIN CONTENT WRAPPER ─── */
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ─── TOP BAR ─── */
+    .topbar {
+      height: var(--topbar-height);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: rgba(7, 8, 10, 0.7);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .model-selector-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-medium);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s;
+    }
+    .model-selector-pill:hover {
+      border-color: var(--border-active);
+      background: var(--surface-tile);
+    }
+
+    .status-dot-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--status-success);
+      position: relative;
+    }
+    .status-dot-pulse::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1px solid var(--status-success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .db-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-subtle);
+    }
+    .db-status-badge svg {
+      width: 13px;
+      height: 13px;
+      stroke: var(--status-success);
+    }
+
+    .user-avatar-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #191E2C;
+      border: 1px solid var(--border-medium);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ─── SCREEN CONTAINERS ─── */
+    .screen-view {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .screen-view.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       SCREEN 01: HOME DASHBOARD (Hero + Living Orb + Composer + Bento Grid)
+       ══════════════════════════════════════════════════════════════════════ */
+    .home-hero-wrap {
+      min-height: calc(100vh - var(--topbar-height) - 100px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px 24px 60px;
+      position: relative;
+    }
+
+    /* ── Living Metallic Chrome Orb ── */
+    .orb-stage-container {
+      position: relative;
+      width: 190px;
+      height: 190px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-halo-grid {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      background-image: radial-gradient(var(--halo-dot) 1.2px, transparent 1.2px);
+      background-size: 12px 12px;
+      mask-image: radial-gradient(circle at center, black 40%, transparent 72%);
+      -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 72%);
+      animation: rotateHalo 45s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes rotateHalo {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    #chromeOrbCanvas {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      box-shadow:
+        0 0 50px -10px rgba(0, 0, 0, 0.9),
+        0 0 35px 2px rgba(227, 6, 19, 0.18),
+        inset 0 0 25px rgba(255, 255, 255, 0.2);
+      cursor: grab;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #chromeOrbCanvas:hover {
+      transform: scale(1.03);
+    }
+
+    .hero-pretitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    .hero-headline {
+      font-size: 38px;
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      color: #FFFFFF;
+      max-width: 680px;
+      line-height: 1.18;
+      margin-bottom: 28px;
+    }
+
+    /* ── Floating Interactive Composer ── */
+    .composer-container {
+      width: 100%;
+      max-width: 740px;
+      background: var(--surface-composer);
+      backdrop-filter: blur(28px);
+      border: 1px solid var(--border-medium);
+      border-radius: 20px;
+      padding: 16px 18px 14px;
+      box-shadow:
+        0 24px 60px -15px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      position: relative;
+      z-index: 20;
+    }
+    .composer-container:focus-within {
+      border-color: rgba(227, 6, 19, 0.45);
+      box-shadow:
+        0 24px 60px -15px rgba(0, 0, 0, 0.85),
+        0 0 25px -4px rgba(227, 6, 19, 0.25);
+    }
+
+    .composer-textarea {
+      width: 100%;
+      height: 48px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+    .composer-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .composer-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .composer-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .composer-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .composer-chip:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .composer-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-mic {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-mic:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* ── STATEFUL SEND BUTTON (Aceternity style black button) ── */
+    .btn-stateful-send {
+      min-width: 118px;
+      height: 36px;
+      border-radius: 9999px;
+      background: #000000;
+      color: #FFFFFF;
+      border: 1px solid #3F4147;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-stateful-send:hover {
+      background: #111317;
+      border-color: #5865F2;
+      box-shadow: 0 0 14px rgba(88, 101, 242, 0.2);
+    }
+    .btn-stateful-send:active {
+      transform: scale(0.97);
+    }
+    .btn-stateful-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: #27272A;
+    }
+
+    .btn-stateful-send .loader-svg,
+    .btn-stateful-send .check-svg {
+      display: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn-stateful-send.is-loading .btn-text { display: none; }
+    .btn-stateful-send.is-loading .loader-svg {
+      display: block;
+      animation: spin 0.8s linear infinite;
+    }
+    .btn-stateful-send.is-success .btn-text { display: none; }
+    .btn-stateful-send.is-success .loader-svg { display: none; }
+    .btn-stateful-send.is-success .check-svg {
+      display: block;
+      stroke: #10B981;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ── LIVE SIMULATED CHAT FEED ON HOME SCREEN ── */
+    .home-chat-feed {
+      width: 100%;
+      max-width: 740px;
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-bubble-user {
+      align-self: flex-end;
+      background: #383A40;
+      border: 1px solid #404249;
+      color: #FFFFFF;
+      padding: 10px 16px;
+      border-radius: 18px 18px 4px 18px;
+      font-size: 14px;
+      max-width: 80%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-bubble-assistant {
+      align-self: flex-start;
+      background: var(--surface-panel);
+      border: 1px solid var(--border-medium);
+      color: var(--text-primary);
+      padding: 14px 18px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 85%;
+      line-height: 1.6;
+      box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+    }
+    .chat-bubble-assistant strong {
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+
+    /* ── SCROLL SECTION: BENTO SHOWCASE (SMK Telkom Malang) ── */
+    .bento-showcase-section {
+      width: 100%;
+      max-width: 1120px;
+      margin: 40px auto 100px;
+      padding: 0 24px;
+    }
+
+    .section-header-block {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .section-header-block h3 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+    }
+    .section-header-block p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .bento-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 220px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bento-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-active);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+    }
+    .bento-card.highlight-card {
+      border-color: var(--moklet-red-border);
+      background: linear-gradient(160deg, rgba(227, 6, 19, 0.08) 0%, var(--surface-panel) 60%);
+    }
+
+    .bento-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .bento-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+    }
+    .bento-card.highlight-card .bento-icon-box {
+      background: var(--moklet-red-subtle);
+      color: var(--moklet-red-hover);
+      border-color: var(--moklet-red-border);
+    }
+
+    .bento-tag {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 9px;
+      border-radius: 9999px;
+      color: var(--text-secondary);
+    }
+
+    .bento-card h4 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+    .bento-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .bento-stat-num {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: #FFFFFF;
+      letter-spacing: -0.03em;
+      margin-bottom: 2px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       SCREEN 02: TRASH & ARCHIVE (Tempat Sampah)
+       ══════════════════════════════════════════════════════════════════════ */
+    .trash-view-wrap {
+      max-width: 1040px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+
+    .screen-header-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .screen-header-bar h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .screen-header-bar p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .trash-action-btns {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-medium);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #F87171;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.22);
+    }
+
+    .trash-table-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .trash-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.15s;
+    }
+    .trash-list-item:last-child {
+      border-bottom: none;
+    }
+    .trash-list-item:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .trash-item-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .trash-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 3px;
+    }
+    .trash-item-snippet {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 550px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trash-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-row-action {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-row-action:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    .btn-row-action.delete-forever:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #F87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       SCREEN 03: DOCUMENTATION (Basis Pengetahuan)
+       ══════════════════════════════════════════════════════════════════════ */
+    .docs-view-wrap {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - var(--topbar-height));
+      overflow: hidden;
+    }
+
+    .docs-nav-subpanel {
+      width: 290px;
+      background: var(--surface-obsidian);
+      border-right: 1px solid var(--border-subtle);
+      padding: 20px 16px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .docs-search-input {
+      width: 100%;
+      background: var(--surface-tile);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: #FFFFFF;
+      font-size: 13px;
+      margin-bottom: 20px;
+      outline: none;
+    }
+    .docs-search-input:focus {
+      border-color: var(--moklet-red-border);
+    }
+
+    .doc-group-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin: 16px 8px 8px;
+    }
+
+    .doc-link-item {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .doc-link-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #FFFFFF;
+    }
+    .doc-link-item.active {
+      background: var(--moklet-red-subtle);
+      color: var(--moklet-red-hover);
+      font-weight: 600;
+    }
+
+    .docs-reader-content {
+      flex: 1;
+      padding: 36px 48px;
+      overflow-y: auto;
+      max-width: 880px;
+    }
+
+    .docs-meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34D399;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+    }
+
+    .docs-reader-content h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+
+    .docs-reader-content p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .docs-callout {
+      background: rgba(227, 6, 19, 0.06);
+      border-left: 3px solid var(--moklet-red);
+      padding: 14px 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 24px 0;
+      font-size: 13.5px;
+      color: var(--chrome-silver);
+      line-height: 1.6;
+    }
+
+    .docs-code-container {
+      background: #060709;
+      border: 1px solid var(--border-medium);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #A5B4FC;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       SCREEN 04: SETTINGS (Pengaturan Sistem & Database)
+       ══════════════════════════════════════════════════════════════════════ */
+    .settings-view-wrap {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 36px 24px 80px;
+    }
+
+    .settings-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .settings-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .settings-card-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-label h5 {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #FFFFFF;
+    }
+    .settings-label p {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #27272A;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--moklet-red);
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .select-dropdown {
+      background: var(--surface-tile);
+      border: 1px solid var(--border-medium);
+      color: #FFFFFF;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* ─── MODAL CONFIRMATION DIALOG ─── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.is-open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #11141D;
+      border: 1px solid var(--border-active);
+      border-radius: 20px;
+      max-width: 440px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+      animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modalIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-dialog h4 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+    .modal-dialog p {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* ─── RESPONSIVE RULES ─── */
+    @media (max-width: 900px) {
+      .sidebar {
+        position: fixed;
+        left: -270px;
+      }
+      .sidebar.open {
+        left: 0;
+      }
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        padding: 0 16px;
+      }
+      .docs-view-wrap {
+        flex-direction: column;
+        height: auto;
+      }
+      .docs-nav-subpanel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient background glow lobes -->
+  <div class="ambient-glow"></div>
+
+  <!-- ─── SIDEBAR NAVIGATION (LEFT RAIL) ─── -->
+  <aside class="sidebar" id="appSidebar">
+    <!-- Brand Header -->
+    <div class="sidebar-header">
+      <a href="#" class="brand-group" onclick="switchScreen('home'); return false;">
+        <div class="brand-logo-wrap">
+          <svg viewBox="0 0 100 100" class="brand-logo-img">
+            <!-- Inline Telkom Schools Monogram -->
+            <circle cx="50" cy="50" r="48" fill="#FFFFFF"/>
+            <path d="M22 25 C35 28 45 23 50 32 C55 23 65 28 78 25 C78 40 68 45 50 50 C32 45 22 40 22 25 Z" fill="#E30613"/>
+            <path d="M30 46 H47 V80 H30 Z" fill="#555555"/>
+            <path d="M47 46 C60 46 70 54 70 66 C70 78 57 80 47 80 Z" fill="none" stroke="#777777" stroke-width="11"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Moka <span class="badge-beta">2.0</span></h1>
+          <p>Moklet Assistant</p>
+        </div>
+      </a>
+      <button class="btn-icon-toggle" id="sidebarCollapseBtn" title="Collapse Sidebar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- Main Navigation Menu -->
+    <div class="nav-section">
+      <div class="nav-label">Main Workstation</div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <button class="active" id="navHomeBtn" onclick="switchScreen('home')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <span>Home</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="navDocsBtn" onclick="switchScreen('documentation')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+            <span>Documentation</span>
+            <span class="nav-count">21</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="navTrashBtn" onclick="switchScreen('trash')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span>Trash</span>
+            <span class="nav-count" id="sidebarTrashCount">3</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="navSettingsBtn" onclick="switchScreen('settings')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Settings</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Recent Chats -->
+    <div class="history-section">
+      <div class="nav-label">Recent Questions</div>
+      <ul class="history-list">
+        <li class="history-item" onclick="loadQueryToInput('Apa saja jurusan yang ada di SMK Telkom Malang?')">
+          <span>Jurusan di SMK Telkom</span>
+          <span class="time">10m</span>
+        </li>
+        <li class="history-item" onclick="loadQueryToInput('Bagaimana cara mendaftar PPDB Jalur Prestasi?')">
+          <span>PPDB Jalur Prestasi 2026</span>
+          <span class="time">2h</span>
+        </li>
+        <li class="history-item" onclick="loadQueryToInput('Apa saja fasilitas di jurusan Pengembangan Gim?')">
+          <span>Fasilitas Game Station PG</span>
+          <span class="time">1d</span>
+        </li>
+        <li class="history-item" onclick="loadQueryToInput('Siapa kepala sekolah SMK Telkom Malang?')">
+          <span>Nama Kepala Sekolah</span>
+          <span class="time">2d</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Pro Card -->
+    <div class="sidebar-footer">
+      <div class="super-card">
+        <h4>⚡ Moklet Super Pro</h4>
+        <p>Akses sinkronisasi basis data real-time & simulasi tes bakat ELA sekolah.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── APP MAIN REGION ─── -->
+  <main class="app-main">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="model-selector-pill" onclick="switchScreen('settings')">
+          <span class="status-dot-pulse"></span>
+          <span>Moka 2.0 Flash</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="topbar-right">
+        <div class="db-status-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Railway DB Online · 21 Unit</span>
+        </div>
+        <button class="user-avatar-btn" title="Profil Siswa Moklet">SM</button>
+      </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SCREEN 01: HOME DASHBOARD
+         ══════════════════════════════════════════════════════════════════ -->
+    <section class="screen-view active" id="viewHome">
+      <div class="home-hero-wrap">
+        
+        <!-- Center Living Metallic Orb -->
+        <div class="orb-stage-container">
+          <div class="orb-halo-grid"></div>
+          <canvas id="chromeOrbCanvas" width="320" height="320"></canvas>
+        </div>
+
+        <p class="hero-pretitle">Selamat Datang di Moklet Assistant</p>
+        <h2 class="hero-headline">Ada yang Bisa Moka Bantu Hari Ini?</h2>
+
+        <!-- Floating Interactive Composer -->
+        <div class="composer-container">
+          <textarea
+            class="composer-textarea"
+            id="mainComposerInput"
+            placeholder="Tanya seputar jurusan, PPDB, beasiswa, ekstrakurikuler SMK Telkom Malang..."
+          ></textarea>
+          
+          <div class="composer-bottom-bar">
+            <div class="composer-chips-row">
+              <button class="composer-chip" onclick="applyChip('Apa saja jurusan di SMK Telkom Malang?')">🎓 Jurusan RPL, TKJ, PG</button>
+              <button class="composer-chip" onclick="applyChip('Bagaimana alur pendaftaran PPDB siswa baru?')">📋 Alur PPDB 2026</button>
+              <button class="composer-chip" onclick="applyChip('Apa itu fasilitas Game Station di jurusan PG?')">🎮 Game Station</button>
+              <button class="composer-chip" onclick="applyChip('Berapa kuota kelas per jurusan di SMK Telkom?')">📊 Kuota Kelas (8-4-2)</button>
+            </div>
+
+            <div class="composer-actions-right">
+              <button class="btn-mic" title="Voice Input" onclick="alert('Fitur Voice Input siap diintegrasikan via Web Speech API.')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              </button>
+
+              <!-- Stateful Button -->
+              <button class="btn-stateful-send" id="statefulSendBtn" onclick="handleSendClick()">
+                <span class="btn-text">Send message</span>
+                <!-- Spinner Loader -->
+                <svg class="loader-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <!-- Checkmark Success -->
+                <svg class="check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Simulated Chat Stream Feed -->
+        <div class="home-chat-feed" id="homeChatFeed"></div>
+      </div>
+
+      <!-- Scroll-Driven Bento Grid Showcase (SMK Telkom Malang Ecosystem) -->
+      <div class="bento-showcase-section">
+        <div class="section-header-block">
+          <h3>Eksplorasi Basis Data SMK Telkom Malang</h3>
+          <p>Pelopor SMK Bidang Teknologi Informasi di Indonesia · Terakreditasi A & ISO 9001:2015</p>
+        </div>
+
+        <div class="bento-grid">
+          <!-- Card 1: RPL -->
+          <div class="bento-card" onclick="loadQueryToInput('Jelaskan detail jurusan Rekayasa Perangkat Lunak (RPL)')">
+            <div class="bento-card-top">
+              <div class="bento-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </div>
+              <span class="bento-tag">8 Rombel Kelas</span>
+            </div>
+            <div>
+              <h4>Rekayasa Perangkat Lunak</h4>
+              <p>Fokus rekayasa aplikasi modern, web full-stack, mobile development, dan cloud computing dengan kurikulum industri.</p>
+            </div>
+          </div>
+
+          <!-- Card 2: TKJ -->
+          <div class="bento-card" onclick="loadQueryToInput('Jelaskan detail jurusan Teknik Komputer dan Jaringan (TKJ)')">
+            <div class="bento-card-top">
+              <div class="bento-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+              </div>
+              <span class="bento-tag">4 Rombel Kelas</span>
+            </div>
+            <div>
+              <h4>Teknik Komputer & Jaringan</h4>
+              <p>Spesialisasi arsitektur jaringan fiber optik, data center, cybersecurity, mikrotik, dan cloud infrastructure.</p>
+            </div>
+          </div>
+
+          <!-- Card 3: PG (Highlight Card) -->
+          <div class="bento-card highlight-card" onclick="loadQueryToInput('Jelaskan jurusan baru Pengembangan Gim (PG)')">
+            <div class="bento-card-top">
+              <div class="bento-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              </div>
+              <span class="bento-tag" style="background: rgba(227,6,19,0.2); color: #FF4D58; border: 1px solid rgba(227,6,19,0.4);">New 2024</span>
+            </div>
+            <div>
+              <h4>Pengembangan Gim (PG)</h4>
+              <p>Mencetak game programmer, 3D artist, dan level designer profesional didukung fasilitas canggih Game Station.</p>
+            </div>
+          </div>
+
+          <!-- Card 4: Stats -->
+          <div class="bento-card">
+            <div class="bento-card-top">
+              <span class="bento-tag">Kapasitas Sekolah</span>
+            </div>
+            <div>
+              <div class="bento-stat-num">1.400+</div>
+              <h4>Siswa Aktif Moklet</h4>
+              <p>Mencakup jenjang kelas X, XI, hingga XII dengan 14 rombongan belajar setiap angkatannya.</p>
+            </div>
+          </div>
+
+          <!-- Card 5: PPDB -->
+          <div class="bento-card" onclick="loadQueryToInput('Bagaimana jadwal dan jalur seleksi PPDB SMK Telkom?')">
+            <div class="bento-card-top">
+              <div class="bento-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <span class="bento-tag">Jalur JP & JST</span>
+            </div>
+            <div>
+              <h4>Penerimaan Peserta Didik Baru</h4>
+              <p>Pendaftaran dibuka melalui Jalur Prestasi rapor/kejuaraan dan Jalur Seleksi Tes berbasis online.</p>
+            </div>
+          </div>
+
+          <!-- Card 6: Kontak -->
+          <div class="bento-card" onclick="loadQueryToInput('Berapa kontak WhatsApp resmi dan alamat SMK Telkom Malang?')">
+            <div class="bento-card-top">
+              <div class="bento-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              </div>
+              <span class="bento-tag">Layanan Pelanggan</span>
+            </div>
+            <div>
+              <h4>WhatsApp 0812-2348-8999</h4>
+              <p>Jl. Danau Ranau, Sawojajar, Kota Malang. Layanan aktif Senin–Sabtu pukul 06.00–16.00 WIB.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SCREEN 02: TRASH & ARCHIVE (Tempat Sampah)
+         ══════════════════════════════════════════════════════════════════ -->
+    <section class="screen-view" id="viewTrash">
+      <div class="trash-view-wrap">
+        <div class="screen-header-bar">
+          <div>
+            <h2>Tempat Sampah & Percakapan Terhapus</h2>
+            <p>Pesan yang dihapus akan disimpan selama 30 hari sebelum dibersihkan permanen.</p>
+          </div>
+          <div class="trash-action-btns">
+            <button class="btn-secondary" onclick="restoreAllTrash()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span>Pulihkan Semua</span>
+            </button>
+            <button class="btn-danger" onclick="triggerEmptyTrashModal()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Kosongkan Sampah</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="trash-table-card" id="trashItemsList">
+          <!-- Item 1 -->
+          <div class="trash-list-item" id="trashItem-1">
+            <div class="trash-item-left">
+              <div>
+                <div class="trash-item-title">Konsultasi Rincian Biaya Masuk & Seragam PPDB 2026</div>
+                <div class="trash-item-snippet">Pengguna menanyakan nominal biaya SPP dan rincian seragam siswa baru...</div>
+              </div>
+            </div>
+            <div class="trash-item-actions">
+              <button class="btn-row-action" onclick="restoreItem('trashItem-1', 'Rincian Biaya PPDB')">Pulihkan</button>
+              <button class="btn-row-action delete-forever" onclick="deleteForever('trashItem-1')">Hapus Permanen</button>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="trash-list-item" id="trashItem-2">
+            <div class="trash-item-left">
+              <div>
+                <div class="trash-item-title">Pertanyaan seputar Jadwal Masuk Siswa Asrama</div>
+                <div class="trash-item-snippet">Menanyakan rekomendasi kos-kosan dan asrama terdekat dari SMK Telkom Malang...</div>
+              </div>
+            </div>
+            <div class="trash-item-actions">
+              <button class="btn-row-action" onclick="restoreItem('trashItem-2', 'Jadwal Siswa Asrama')">Pulihkan</button>
+              <button class="btn-row-action delete-forever" onclick="deleteForever('trashItem-2')">Hapus Permanen</button>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="trash-list-item" id="trashItem-3">
+            <div class="trash-item-left">
+              <div>
+                <div class="trash-item-title">Ekskul Robotik dan Kejuaraan Nasional</div>
+                <div class="trash-item-snippet">Daftar prestasi kejuaraan robotik dan lomba IT tingkat nasional...</div>
+              </div>
+            </div>
+            <div class="trash-item-actions">
+              <button class="btn-row-action" onclick="restoreItem('trashItem-3', 'Ekskul Robotik')">Pulihkan</button>
+              <button class="btn-row-action delete-forever" onclick="deleteForever('trashItem-3')">Hapus Permanen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SCREEN 03: DOCUMENTATION (Basis Pengetahuan Resmi)
+         ══════════════════════════════════════════════════════════════════ -->
+    <section class="screen-view" id="viewDocs">
+      <div class="docs-view-wrap">
+        <!-- Sub navigation pane -->
+        <div class="docs-nav-subpanel">
+          <input type="text" class="docs-search-input" id="docsSearchFilter" placeholder="Filter 21 topik dokumen..." oninput="filterDocsArticles(this.value)" />
+
+          <div class="doc-group-title">Profil & Kelembagaan</div>
+          <a class="doc-link-item active" onclick="showDocArticle('profil-singkat')">Profil Singkat SMK Telkom</a>
+          <a class="doc-link-item" onclick="showDocArticle('akreditasi')">Akreditasi & Standar Mutu</a>
+          <a class="doc-link-item" onclick="showDocArticle('kepala-sekolah')">Kepala Sekolah</a>
+          <a class="doc-link-item" onclick="showDocArticle('kapasitas')">Jumlah Siswa & Rombel</a>
+
+          <div class="doc-group-title">Program Keahlian</div>
+          <a class="doc-link-item" onclick="showDocArticle('jurusan-rpl')">Rekayasa Perangkat Lunak (RPL)</a>
+          <a class="doc-link-item" onclick="showDocArticle('jurusan-tkj')">Teknik Komputer & Jaringan (TKJ)</a>
+          <a class="doc-link-item" onclick="showDocArticle('jurusan-pg')">Pengembangan Gim (PG)</a>
+          <a class="doc-link-item" onclick="showDocArticle('kuota-jurusan')">Alokasi Kuota Kelas (8-4-2)</a>
+
+          <div class="doc-group-title">PPDB & Seleksi Masuk</div>
+          <a class="doc-link-item" onclick="showDocArticle('alur-ppdb')">Informasi & Alur PPDB</a>
+          <a class="doc-link-item" onclick="showDocArticle('tahapan-seleksi')">Tahapan Seleksi Masuk</a>
+          <a class="doc-link-item" onclick="showDocArticle('kebijakan-biaya')">Biaya Pendaftaran & SPP</a>
+
+          <div class="doc-group-title">Kontak & Layanan</div>
+          <a class="doc-link-item" onclick="showDocArticle('kontak-lokasi')">Alamat & Call Center</a>
+          <a class="doc-link-item" onclick="showDocArticle('jam-layanan')">Jam Operasional Layanan</a>
+        </div>
+
+        <!-- Document Reader pane -->
+        <div class="docs-reader-content" id="docArticleContent">
+          <span class="docs-meta-tag">✓ Terverifikasi Basis Data Resmi SMK Telkom Malang</span>
+          <h2 id="docTitle">Profil Singkat SMK Telkom Malang</h2>
+          <p id="docBody">
+            SMK Telkom Malang adalah sekolah menengah kejuruan swasta di bawah naungan Yayasan Pendidikan Telkom (YPT) yang berfokus pada bidang teknologi informasi. Sekolah ini berdiri pada 14 Juni 1992 dan dikenal sebagai pelopor SMK informatika di Indonesia. Nama resminya dulu SMK Telkom Sandhy Putra Malang, lalu menjadi SMK Telkom Malang setelah rebranding sekolah-sekolah Telkom pada 2014. Siswanya dijuluki Mokleters, dari kata Moklet yang merupakan kebalikan dari Telkom.
+          </p>
+
+          <div class="docs-callout">
+            <strong>Fakta Penting:</strong> SMK Telkom Malang merupakan pelopor pendidikan vokasi informatika pertama di Indonesia dengan akreditasi A dan standar mutu ISO 9001:2015.
+          </div>
+
+          <div class="docs-code-container">
+            <code>
+{
+  "category": "Profil",
+  "title": "Profil singkat SMK Telkom Malang",
+  "keywords": "sejarah berdiri 1992 moklet mokleters yayasan ypt telkom"
+}
+            </code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SCREEN 04: SETTINGS (Pengaturan Konfigurasi)
+         ══════════════════════════════════════════════════════════════════ -->
+    <section class="screen-view" id="viewSettings">
+      <div class="settings-view-wrap">
+        <div class="screen-header-bar">
+          <div>
+            <h2>Pengaturan Sistem Moklet Assistant</h2>
+            <p>Kelola parameter model AI, koneksi basis data Railway, dan preferensi antarmuka.</p>
+          </div>
+        </div>
+
+        <!-- Card A: Model Config -->
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+            <span>Model Kecerdasan Buatan (LLM Engine)</span>
+          </div>
+          <div class="settings-card-desc">Konfigurasi mesin LLM utama Google Gemini yang dipakai untuk memproses inferensi pesan.</div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Model AI Utama</h5>
+              <p>Gemini 2.0 Flash dioptimalkan untuk kecepatan dan pemrosesan instan.</p>
+            </div>
+            <select class="select-dropdown">
+              <option selected>Google Gemini 2.0 Flash</option>
+              <option>Google Gemini 1.5 Flash</option>
+              <option>Google Gemini 1.5 Pro (Deep Think)</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Tingkat Suhu Kreativitas (Temperature)</h5>
+              <p>Suhu rendah (0.2) menghasilkan jawaban ketat berbasis data tanpa halusinasi.</p>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 13px; color: #34D399;">0.20 (Faktual Ketat)</span>
+          </div>
+        </div>
+
+        <!-- Card B: Database Sync -->
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            <span>Status Sinkronisasi Basis Data</span>
+          </div>
+          <div class="settings-card-desc">Status koneksi basis data online dan salinan lokal.</div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Railway Cloud MySQL</h5>
+              <p>Host: production-b22e59af.up.railway.app (21 Unit Terindeks)</p>
+            </div>
+            <button class="btn-secondary" onclick="testDbConnection(this)">Tes Koneksi</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Fallback Basis Data Lokal (data.md)</h5>
+              <p>Aktif otomatis jika server cloud mengalami gangguan jaringan.</p>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 12px; color: #10B981;">✓ Standby Siaga</span>
+          </div>
+        </div>
+
+        <!-- Card C: Tampilan -->
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            <span>Tampilan & Aksesibilitas</span>
+          </div>
+          <div class="settings-card-desc">Sesuaikan kenyamanan visual dan animasi antarmuka.</div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Animasi Ketikan Halus (Text Generate Effect)</h5>
+              <p>Menampilkan respon kata demi kata secara lembut.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Kurangi Gerakan (Prefers Reduced Motion)</h5>
+              <p>Mematikan rotasi living orb dan transisi dinamis.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="reduceMotionToggle" onchange="toggleReducedMotion(this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Card D: Data Management -->
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Privasi & Ekspor Data</span>
+          </div>
+          <div class="settings-card-desc">Simpan cadangan data percakapan atau bersihkan riwayat sesi lokal.</div>
+
+          <div class="settings-row">
+            <div class="settings-label">
+              <h5>Ekspor Seluruh Percakapan</h5>
+              <p>Unduh file arsip berformat JSON berisi seluruh riwayat konsultasi Anda.</p>
+            </div>
+            <button class="btn-secondary" onclick="exportChatHistory()">Unduh JSON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── MODAL CONFIRMATION: EMPTY TRASH ─── -->
+  <div class="modal-backdrop" id="emptyTrashModal">
+    <div class="modal-dialog">
+      <h4>Kosongkan Seluruh Tempat Sampah?</h4>
+      <p>Semua percakapan dan riwayat konsultasi di dalam tempat sampah akan dihapus secara permanen dan tidak dapat dipulihkan kembali.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeEmptyTrashModal()">Batal</button>
+        <button class="btn-danger" onclick="confirmEmptyTrash()">Ya, Kosongkan Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── JAVASCRIPT LOGIC & 3D CHROME CANVAS ─── -->
+  <script>
+    // ── 1. PROCEDURAL 3D CHROME LIVING ORB (Canvas) ──
+    const canvas = document.getElementById('chromeOrbCanvas');
+    const ctx = canvas.getContext('2d');
+    let orbTime = 0;
+    let isReducedMotion = false;
+    let mouseX = 160, mouseY = 160;
+
+    function renderChromeOrb() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const r = 70;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (!isReducedMotion) {
+        orbTime += 0.025;
+      }
+
+      // Dynamic light vector based on sine wave & mouse
+      const lightX = cx + Math.cos(orbTime * 0.7) * 22;
+      const lightY = cy + Math.sin(orbTime * 0.9) * 20;
+
+      // 1. Dark core base
+      const baseGrad = ctx.createRadialGradient(lightX - 15, lightY - 15, 10, cx, cy, r);
+      baseGrad.addColorStop(0, '#FFFFFF');
+      baseGrad.addColorStop(0.18, '#CBD5E1');
+      baseGrad.addColorStop(0.45, '#334155');
+      baseGrad.addColorStop(0.72, '#0F172A');
+      baseGrad.addColorStop(0.95, '#020617');
+      baseGrad.addColorStop(1, '#000000');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = baseGrad;
+      ctx.fill();
+
+      // 2. Liquid Chrome Swirling Reflections
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Curved specular wave
+      const waveX = cx + Math.sin(orbTime * 1.2) * 35;
+      const waveY = cy + Math.cos(orbTime * 0.8) * 35;
+
+      const chromeReflect = ctx.createRadialGradient(waveX, waveY, 5, cx, cy, r);
+      chromeReflect.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
+      chromeReflect.addColorStop(0.3, 'rgba(227, 6, 19, 0.45)');
+      chromeReflect.addColorStop(0.65, 'rgba(56, 189, 248, 0.15)');
+      chromeReflect.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = chromeReflect;
+      ctx.fill();
+
+      // Inner horizon contour line
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 10, r * 0.75, r * 0.35, Math.sin(orbTime * 0.5) * 0.3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = 2.5;
+      ctx.filter = 'blur(2px)';
+      ctx.stroke();
+      ctx.filter = 'none';
+
+      ctx.restore();
+
+      // 3. Crisp Glass Specular Highlight (Rim)
+      const rimGrad = ctx.createRadialGradient(cx - 24, cy - 24, 2, cx, cy, r);
+      rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      rimGrad.addColorStop(0.12, 'rgba(255, 255, 255, 0.6)');
+      rimGrad.addColorStop(0.35, 'transparent');
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = rimGrad;
+      ctx.fill();
+
+      requestAnimationFrame(renderChromeOrb);
+    }
+    renderChromeOrb();
+
+    // ── 2. SCREEN VIEW SWITCHER ──
+    function switchScreen(screenId) {
+      // Deactivate all screens
+      document.querySelectorAll('.screen-view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item button').forEach(btn => btn.classList.remove('active'));
+
+      if (screenId === 'home') {
+        document.getElementById('viewHome').classList.add('active');
+        document.getElementById('navHomeBtn').classList.add('active');
+      } else if (screenId === 'documentation') {
+        document.getElementById('viewDocs').classList.add('active');
+        document.getElementById('navDocsBtn').classList.add('active');
+      } else if (screenId === 'trash') {
+        document.getElementById('viewTrash').classList.add('active');
+        document.getElementById('navTrashBtn').classList.add('active');
+      } else if (screenId === 'settings') {
+        document.getElementById('viewSettings').classList.add('active');
+        document.getElementById('navSettingsBtn').classList.add('active');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── 3. STATEFUL COMPOSER & MOCK GEMINI INFERENCE ──
+    const knowledgeBase = {
+      jurusan: "SMK Telkom Malang memiliki tiga program keahlian unggulan:\n1. **Rekayasa Perangkat Lunak (RPL)**: Fokus rekayasa aplikasi, web fullstack, dan mobile development (8 kelas).\n2. **Teknik Komputer & Jaringan (TKJ)**: Fokus infrastruktur fiber optik, data center, cybersecurity, dan cloud networking (4 kelas).\n3. **Pengembangan Gim (PG)**: Jurusan baru yang dibuka tahun 2024 didukung sarana **Game Station** canggih untuk mencetak kreator dan arsitek gim profesional (2 kelas).",
+      ppdb: "Penerimaan Peserta Didik Baru (PPDB) SMK Telkom Malang dilaksanakan melalui dua jalur utama:\n1. **Jalur Prestasi (JP)**: Seleksi berbasis nilai rapor semester 1–5 serta piagam kejuaraan akademik/non-akademik.\n2. **Jalur Seleksi Tes (JST)**: Ujian seleksi tes terstandar secara online.\n\nPendaftaran dapat diakses melalui portal resmi: **ppdb.smktelkom-mlg.sch.id**.",
+      gamestation: "Fasilitas **Game Station** di SMK Telkom Malang dirancang khusus untuk mendukung pembelajaran Jurusan Pengembangan Gim (PG). Dilengkapi workstation ber-GPU tinggi, capture station, VR testing kit, serta software berstandar industri (Unity, Unreal Engine 5, Blender).",
+      kontak: "Layanan informasi resmi SMK Telkom Malang:\n• **WhatsApp**: 0812-2348-8999\n• **Telepon**: (0341) 712500\n• **Alamat**: Jl. Danau Ranau, Sawojajar, Kota Malang\n• **Jam Layanan**: Senin–Sabtu pukul 06.00–16.00 WIB."
+    };
+
+    function applyChip(text) {
+      const input = document.getElementById('mainComposerInput');
+      input.value = text;
+      input.focus();
+    }
+
+    function loadQueryToInput(text) {
+      switchScreen('home');
+      applyChip(text);
+      handleSendClick();
+    }
+
+    async function handleSendClick() {
+      const input = document.getElementById('mainComposerInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const btn = document.getElementById('statefulSendBtn');
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+
+      // Append user bubble
+      const feed = document.getElementById('homeChatFeed');
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble-user';
+      userBubble.textContent = val;
+      feed.appendChild(userBubble);
+      input.value = '';
+
+      // Simulate AI response delay
+      await new Promise(r => setTimeout(r, 1400));
+
+      // Resolve answer from knowledge base
+      let replyText = "Halo! Terima kasih atas pertanyaan Anda. SMK Telkom Malang adalah pelopor SMK IT di Indonesia dengan akreditasi A. Untuk pertanyaan spesifik, Anda dapat mengecek menu Dokumentasi atau menghubungi Call Center WhatsApp kami di 0812-2348-8999.";
+      const lower = val.toLowerCase();
+      if (lower.includes('jurusan') || lower.includes('rpl') || lower.includes('tkj') || lower.includes('pg') || lower.includes('gim')) {
+        replyText = knowledgeBase.jurusan;
+      } else if (lower.includes('ppdb') || lower.includes('daftar') || lower.includes('syarat') || lower.includes('prestasi')) {
+        replyText = knowledgeBase.ppdb;
+      } else if (lower.includes('game') || lower.includes('station')) {
+        replyText = knowledgeBase.gamestation;
+      } else if (lower.includes('kontak') || lower.includes('alamat') || lower.includes('wa') || lower.includes('nomor')) {
+        replyText = knowledgeBase.kontak;
+      }
+
+      // Button state: Loading -> Success checkmark
+      btn.classList.remove('is-loading');
+      btn.classList.add('is-success');
+
+      // Append assistant bubble
+      const aiBubble = document.createElement('div');
+      aiBubble.className = 'chat-bubble-assistant';
+      aiBubble.innerHTML = replyText.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      feed.appendChild(aiBubble);
+
+      // Revert button after 1.8 seconds
+      setTimeout(() => {
+        btn.classList.remove('is-success');
+        btn.disabled = false;
+      }, 1800);
+    }
+
+    // ── 4. TRASH MANAGEMENT ACTIONS ──
+    function restoreItem(itemId, title) {
+      const el = document.getElementById(itemId);
+      if (el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          el.remove();
+          updateTrashCount();
+          alert(`Percakapan "${title}" berhasil dipulihkan kembali ke riwayat obrolan.`);
+        }, 250);
+      }
+    }
+
+    function deleteForever(itemId) {
+      if (confirm('Hapus permanen percakapan ini dari memori sesi?')) {
+        const el = document.getElementById(itemId);
+        if (el) {
+          el.remove();
+          updateTrashCount();
+        }
+      }
+    }
+
+    function restoreAllTrash() {
+      const items = document.querySelectorAll('.trash-list-item');
+      if (items.length === 0) {
+        alert('Tempat sampah sudah kosong.');
+        return;
+      }
+      items.forEach(el => el.remove());
+      updateTrashCount();
+      alert('Semua percakapan berhasil dipulihkan!');
+    }
+
+    function triggerEmptyTrashModal() {
+      document.getElementById('emptyTrashModal').classList.add('is-open');
+    }
+    function closeEmptyTrashModal() {
+      document.getElementById('emptyTrashModal').classList.remove('is-open');
+    }
+    function confirmEmptyTrash() {
+      const list = document.getElementById('trashItemsList');
+      list.innerHTML = '<div style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px;">Tempat sampah bersih dan kosong.</div>';
+      closeEmptyTrashModal();
+      updateTrashCount();
+    }
+
+    function updateTrashCount() {
+      const count = document.querySelectorAll('.trash-list-item').length;
+      document.getElementById('sidebarTrashCount').textContent = count;
+    }
+
+    // ── 5. DOCUMENTATION VIEWER ──
+    const docArticles = {
+      'profil-singkat': {
+        title: "Profil Singkat SMK Telkom Malang",
+        body: "SMK Telkom Malang adalah sekolah menengah kejuruan swasta di bawah naungan Yayasan Pendidikan Telkom (YPT) yang berfokus pada bidang teknologi informasi. Sekolah ini berdiri pada 14 Juni 1992 dan dikenal sebagai pelopor SMK informatika di Indonesia. Siswanya dijuluki Mokleters, dari kata Moklet yang merupakan kebalikan dari Telkom.",
+        callout: "Didirikan 14 Juni 1992 sebagai pelopor SMK IT pertama di Indonesia."
+      },
+      'akreditasi': {
+        title: "Akreditasi & Standar Mutu ISO 9001:2015",
+        body: "SMK Telkom Malang terakreditasi A, memiliki standar mutu ISO 9001:2015, dan berstatus sekolah Adiwiyata mandiri. Kurikulum yang diterapkan sepenuhnya mengacu pada Kurikulum Merdeka yang diselaraskan dengan kebutuhan industri software global.",
+        callout: "Sertifikasi ISO 9001:2015 menjamin sistem tata kelola manajemen pendidikan berstandar internasional."
+      },
+      'kepala-sekolah': {
+        title: "Kepala Sekolah & Manajemen",
+        body: "Kepala SMK Telkom Malang saat ini dipimpin oleh Rahmat Dwi Djatmiko, didukung tim manajemen kurikulum, kesiswaan, dan hubungan industri (Hubin) yang berkomitmen pada akselerasi karir lulusan.",
+        callout: "Pimpinan sekolah mengedepankan inovasi digital dan kesiapan kerja lulusan di perusahaan multinasional."
+      },
+      'jurusan-rpl': {
+        title: "Rekayasa Perangkat Lunak (RPL)",
+        body: "Jurusan RPL berfokus pada rekayasa perangkat lunak modern, pengembangan web frontend/backend, aplikasi mobile iOS & Android, serta cloud backend. Lulusan dipersiapkan menjadi full-stack programmer dan software engineer.",
+        callout: "Jurusan RPL merupakan jurusan dengan kuota rombel terbanyak (8 rombel) dengan rasio serapan kerja tertinggi."
+      },
+      'jurusan-tkj': {
+        title: "Teknik Komputer & Jaringan (TKJ)",
+        body: "Konsentrasi keahlian yang mendalami infrastruktur routing-switching, jaringan fiber optik, server management, virtualization, serta cybersecurity. Dilengkapi laboratorium mikrotik dan cisco terakreditasi.",
+        callout: "Lulusan dibekali sertifikasi industri berstandar internasional (MTCNA, CCNA, Cloud Architect)."
+      },
+      'jurusan-pg': {
+        title: "Pengembangan Gim (PG) & Game Station",
+        body: "Jurusan terbaru yang diluncurkan pada tahun 2024 bagi peserta didik yang ingin berkarir sebagai kreator gim digital. Siswa mempelajari perancangan naratif, level design, modelling aset 2D/3D, hingga pemrograman game engine (Unity & Unreal Engine 5).",
+        callout: "Fasilitas Game Station menyediakan ekosistem hardware workstation kelas industri untuk riset dan publikasi gim mandiri."
+      }
+    };
+
+    function showDocArticle(articleKey) {
+      const art = docArticles[articleKey];
+      if (!art) return;
+
+      document.querySelectorAll('.doc-link-item').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.getElementById('docTitle').textContent = art.title;
+      document.getElementById('docBody').textContent = art.body;
+      document.querySelector('.docs-callout').innerHTML = `<strong>Fakta Penting:</strong> ${art.callout}`;
+    }
+
+    function filterDocsArticles(keyword) {
+      const term = keyword.toLowerCase();
+      document.querySelectorAll('.doc-link-item').forEach(link => {
+        const text = link.textContent.toLowerCase();
+        link.style.display = text.includes(term) ? 'block' : 'none';
+      });
+    }
+
+    // ── 6. SETTINGS & EXPORT ──
+    function toggleReducedMotion(isChecked) {
+      isReducedMotion = isChecked;
+      const halo = document.querySelector('.orb-halo-grid');
+      if (halo) halo.style.animationPlayState = isChecked ? 'paused' : 'running';
+    }
+
+    function testDbConnection(btn) {
+      btn.textContent = 'Mengecek...';
+      setTimeout(() => {
+        btn.textContent = '✓ Terhubung (18ms)';
+        btn.style.color = '#34D399';
+        btn.style.borderColor = '#10B981';
+      }, 700);
+    }
+
+    function exportChatHistory() {
+      const chatData = {
+        app: "Moklet Assistant (Moka)",
+        version: "2.0.0",
+        exportDate: new Date().toISOString(),
+        verifiedUnits: 21,
+        logs: [
+          { role: "user", message: "Apa saja jurusan di SMK Telkom Malang?", timestamp: "2026-11-19T08:30:00Z" },
+          { role: "assistant", message: knowledgeBase.jurusan, timestamp: "2026-11-19T08:30:02Z" }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `moka-chat-history-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
