@@ -212,9 +212,16 @@ export function PlaceholdersAndVanishInput({
         ref={inputRef}
         value={value}
         type="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck="false"
+        data-gramm="false"
+        data-gramm_editor="false"
+        data-enable-grammarly="false"
         className={cn(
           "w-full relative text-sm sm:text-base z-40 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-32 sm:pr-36",
-          animating && "text-transparent dark:text-transparent"
+          animating && "text-transparent dark:text-transparent selection:bg-transparent"
         )}
       />
 
