@@ -112,41 +112,41 @@ export function loadKnowledgeBase() {
 }
 
 /**
- * Menyusun system prompt yang membatasi jawaban Gemini HANYA berdasarkan database data.md.
+ * Menyusun system prompt yang membatasi jawaban Gemini HANYA berdasarkan database pengetahuan.
  */
-export function buildSystemPrompt() {
+export function buildSystemPrompt(items = loadKnowledgeBase()) {
   if (process.env.SYSTEM_PROMPT) {
     return process.env.SYSTEM_PROMPT;
   }
 
-  const items = loadKnowledgeBase();
   let knowledgeSection = "";
 
-  if (items.length > 0) {
+  if (items && items.length > 0) {
     const formatted = items
-      .map(
-        (item, idx) =>
-          `[Data ${idx + 1}] Kategori: ${item.category} | Judul: ${item.title}\nIsi: ${item.content}`
-      )
+      .map((item, idx) => {
+        const school = item.school_name ? ` | Sekolah: ${item.school_name}` : "";
+        return `[Data ${idx + 1}]${school} | Kategori: ${item.category} | Judul: ${item.title}\nIsi: ${item.content}`;
+      })
       .join("\n\n");
 
-    knowledgeSection = `\n=== DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG ===\n${formatted}\n====================================================\n`;
+    knowledgeSection = `\n=== DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG & SEKOLAH KEJURUAN ===\n${formatted}\n=======================================================================\n`;
   }
 
-  return `Kamu adalah asisten AI resmi untuk SMK Telkom Malang (Moklet). Tugasmu adalah memberikan informasi yang akurat, ramah, dan solutif seputar SMK Telkom Malang kepada calon siswa, siswa, orang tua, dan masyarakat umum.
+  return `Kamu adalah Moklet Assistant (Moka), asisten AI resmi yang cerdas, ramah, dan solutif seputar SMK Telkom Malang (Moklet) serta sekolah kejuruan (SMK) lainnya di Malang (seperti SMKN 3 Malang, SMKN 4 Malang, SMKN 5 Malang, dan SMKN 6 Malang) yang tercatat di database.
 
 ATURAN UTAMA (SANGAT KETAT):
-1. SUMBER INFORMASI TUNGGAL: Jawablah pertanyaan HANYA berdasarkan fakta yang tertulis di dalam "DATABASE PENGETAHUAN RESMI" di bawah.
-2. TIDAK BOLEH MENGARANG: JANGAN pernah mengarang, berspekulasi, berhalusinasi, atau menggunakan informasi di luar database resmi ini.
+1. SUMBER INFORMASI TUNGGAL: Jawablah pertanyaan pengguna berdasarkan fakta yang tertulis di dalam "DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG & SEKOLAH KEJURUAN" di bawah. Jika data sekolah yang ditanyakan (misalnya SMK Telkom, SMKN 5, SMKN 4, SMKN 3, SMKN 6) tersedia di database, jawablah dengan lengkap, ramah, dan jelas.
+2. TIDAK BOLEH MENGARANG: JANGAN pernah mengarang atau berspekulasi di luar informasi yang ada di database.
 3. PERTANYAAN DI LUAR DATABASE ATAU DATA BELUM TERSEDIA:
-   - Jika pengguna menanyakan hal umum yang tidak relevan dengan SMK Telkom Malang (misalnya resep masakan, cuaca kota lain, tugas coding umum, politik, dll.), tolak dengan santun dan jelaskan bahwa kamu adalah asisten khusus SMK Telkom Malang.
-   - Jika pengguna menanyakan info tentang SMK Telkom Malang tetapi datanya belum ada di database (misalnya rincian nominal biaya masuk/SPP yang belum tertera): sampaikan bahwa informasi resmi tersebut belum tersedia di data kami, lalu arahkan untuk menghubungi kontak resmi:
+   - Jika pengguna menanyakan hal umum yang tidak ada kaitannya dengan sekolah/SMK (misalnya resep masakan, cuaca kota lain, politik luar negeri), tolak dengan santun dan jelaskan fokus layanan ini seputar SMK di Malang.
+   - Jika pengguna menanyakan info tentang SMK Telkom Malang tetapi datanya belum ada di database: sampaikan bahwa informasi resmi tersebut belum tersedia di data kami, lalu arahkan untuk menghubungi kontak resmi:
      * Call Center / WhatsApp: 0812-2348-8999
      * Telepon Kantor: 0341-712500
      * Email: info@smktelkom-mlg.sch.id
      * Website: smktelkom-mlg.sch.id / ppdb.smktelkom-mlg.sch.id
      * Instagram & TikTok: @smktelkommalang
      * Jam Layanan: Senin - Sabtu pukul 06.00 - 16.00 WIB (Minggu tutup)
+   - Jika menanyakan sekolah lain (seperti SMKN 3, 4, 5, 6) yang informasinya belum tercatat lengkap, arahkan ke kontak resmi sekolah tersebut yang ada di database atau dinas pendidikan.
 4. GAYA BAHASA: Santun, ramah, jelas, dan profesional dalam Bahasa Indonesia. Boleh menggunakan poin-poin agar mudah dibaca.
 5. NATURAL: Jangan menyebutkan kata-kata teknis seperti "berdasarkan database di atas" atau "menurut prompt sistem". Jawablah langsung secara alami sebagai asisten sekolah resmi.
 ${knowledgeSection}`;
@@ -201,14 +201,16 @@ export function toGeminiContents(history, message) {
 }
 
 /** Pembungkus Gemini SDK dengan timeout. Dipisah supaya mudah di-mock saat testing. */
-export function createGeminiGenerator(systemInstruction = buildSystemPrompt()) {
+export function createGeminiGenerator(defaultSystemInstruction) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: MODEL_NAME,
-    systemInstruction,
-  });
 
-  return async (contents) => {
+  return async (contents, dynamicSystemInstruction) => {
+    const instruction = dynamicSystemInstruction || defaultSystemInstruction || buildSystemPrompt();
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: instruction,
+    });
+
     const controller = new AbortController();
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -302,7 +304,9 @@ export function createApp({ generate, retries = MAX_RETRIES, retryDelayMs = RETR
 
     try {
       const contents = toGeminiContents(parsed.history, parsed.message);
-      const reply = await withRetry(() => generate(contents), {
+      const items = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
+      const currentPrompt = buildSystemPrompt(items);
+      const reply = await withRetry(() => generate(contents, currentPrompt), {
         retries,
         delayMs: retryDelayMs,
         onRetry: (err, n) =>
