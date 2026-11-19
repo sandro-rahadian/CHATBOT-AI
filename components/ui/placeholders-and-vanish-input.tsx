@@ -216,7 +216,7 @@ export function PlaceholdersAndVanishInput({
       <Button
         disabled={!value || animating}
         type="submit"
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[110px] h-9 px-3.5 sm:px-4 rounded-full bg-black hover:bg-neutral-900 text-white border border-[#3f4147] hover:ring-2 hover:ring-neutral-700 dark:ring-offset-black disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none transition duration-200"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[110px] h-9 px-3.5 sm:px-4 rounded-full bg-[#383a40] hover:bg-[#404249] active:bg-[#313338] text-[#dbdee1] hover:text-white border border-[#4e5058] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200"
       >
         <span className="text-xs font-medium tracking-tight">Send message</span>
       </Button>
