@@ -8,8 +8,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export const Button = ({ className, children, ...props }: ButtonProps) => {
-  const [scope, animate] = useAnimate();
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, children, ...props }, ref) => {
+    const [scope, animate] = useAnimate();
+
+    // Gabungkan ref dari luar dan ref scope
+    React.useImperativeHandle(ref, () => scope.current);
 
   const animateLoading = async () => {
     await animate(
@@ -98,7 +102,9 @@ export const Button = ({ className, children, ...props }: ButtonProps) => {
       </motion.div>
     </motion.button>
   );
-};
+});
+
+Button.displayName = "Button";
 
 const Loader = () => {
   return (

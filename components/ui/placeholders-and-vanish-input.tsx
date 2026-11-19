@@ -150,14 +150,19 @@ export function PlaceholdersAndVanishInput({
     animateFrame(start);
   };
 
+  const btnRef = useRef<HTMLButtonElement>(null);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !animating) {
       e.preventDefault();
-      const form = inputRef.current?.form;
-      if (form) {
-        form.requestSubmit();
+      const val = inputRef.current?.value || value;
+      if (!val.trim()) return;
+
+      if (btnRef.current) {
+        btnRef.current.click();
       } else {
         vanishAndSubmit();
+        onSubmit && onSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
       }
     }
   };
@@ -214,6 +219,7 @@ export function PlaceholdersAndVanishInput({
       />
 
       <Button
+        ref={btnRef}
         disabled={!value || animating}
         type="submit"
         className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[110px] h-9 px-3.5 sm:px-4 rounded-full bg-[#383a40] hover:bg-[#404249] active:bg-[#313338] text-[#dbdee1] hover:text-white border border-[#4e5058] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200"
