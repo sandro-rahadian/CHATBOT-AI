@@ -152,7 +152,13 @@ export function PlaceholdersAndVanishInput({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !animating) {
-      vanishAndSubmit();
+      e.preventDefault();
+      const form = inputRef.current?.form;
+      if (form) {
+        form.requestSubmit();
+      } else {
+        vanishAndSubmit();
+      }
     }
   };
 

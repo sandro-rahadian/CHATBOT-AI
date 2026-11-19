@@ -35,34 +35,30 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
         onHoverEnd={() => setExpanded(false)}
         onClick={() => setExpanded((prev) => !prev)}
         animate={{
-          width: expanded ? 330 : 46,
-          height: 46,
+          width: expanded ? 320 : 180,
+          height: 44,
         }}
         transition={{
           type: "spring",
           stiffness: 400,
           damping: 30,
         }}
-        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#4e5058]"
+        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#4e5058] px-3.5"
       >
         <AnimatePresence mode="wait">
           {!expanded ? (
             <motion.div
               key="collapsed"
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 flex items-center justify-center"
+              className="flex items-center gap-2"
             >
-              <Image
-                src="/logo.png"
-                alt="Moklet Assistant"
-                width={28}
-                height={28}
-                className="w-7 h-7 object-contain drop-shadow rounded-full"
-                priority
-              />
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
+                Seputar SMK Malang
+              </span>
             </motion.div>
           ) : (
             <motion.div
@@ -71,18 +67,12 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 flex items-center justify-between px-4"
+              className="w-full flex items-center justify-between"
             >
-              <div className="flex items-center gap-2.5">
-                <Image
-                  src="/logo.png"
-                  alt="Moklet Assistant"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6 object-contain rounded-full"
-                />
-                <span className="text-xs sm:text-sm font-semibold text-[#f2f3f5] tracking-tight">
-                  Moklet Assistant
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
+                  Seputar SMK Malang
                 </span>
               </div>
               <HoverBorderGradient
@@ -185,12 +175,12 @@ function ChatBubble({ message }: { message: Message }) {
 // ─── ChatPage (default export) ────────────────────────────────────────────────
 
 const CHAT_PLACEHOLDERS = [
-  "Tanya seputar SMK Telkom Malang...",
+  "Tanya seputar SMK di Malang...",
   "Apa saja jurusan di SMK Telkom Malang?",
-  "Bagaimana cara daftar PPDB siswa baru?",
+  "Dimana alamat SMKN 5 Malang?",
+  "Bagaimana cara daftar PPDB di SMKN 4 Malang?",
   "Siapa kepala sekolah SMK Telkom Malang?",
-  "Apa itu jurusan Pengembangan Gim (PG)?",
-  "Ekskul apa saja yang ada di Moklet?",
+  "Ekskul apa saja yang ada di SMKN 3 Malang?",
 ];
 
 export default function ChatPage() {
