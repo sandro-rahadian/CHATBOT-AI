@@ -4,6 +4,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { tavily } from "@tavily/core";
 import mysql from "mysql2/promise";
 import fs from "node:fs";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -131,10 +132,139 @@ export function loadGuideDocument() {
   return "";
 }
 
+// ---------- Tavily Web Search ----------
+let cachedTavilyClient = null;
+
+export function getTavilyClient() {
+  if (cachedTavilyClient) return cachedTavilyClient;
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return null;
+  try {
+    cachedTavilyClient = tavily({ apiKey });
+    return cachedTavilyClient;
+  } catch (err) {
+    console.warn("[Tavily] Inisialisasi client gagal:", err?.message ?? err);
+    return null;
+  }
+}
+
 /**
- * Menyusun system prompt yang membatasi jawaban Gemini HANYA berdasarkan database pengetahuan dan dokumen panduan.
+ * Menentukan apakah pesan user membutuhkan pencarian web (Tavily).
+ * Dipicu ketika user menanyakan info tentang SMK di Malang yang tidak ada di database 5 sekolah,
+ * atau informasi spesifik/terkini seputar SMK/vokasi.
  */
-export function buildSystemPrompt(items = loadKnowledgeBase(), guideDoc = loadGuideDocument()) {
+export function shouldPerformWebSearch(message) {
+  if (!process.env.TAVILY_API_KEY) return false;
+  if (typeof message !== "string") return false;
+
+  const text = message.toLowerCase().trim();
+
+  // Abaikan sapaan singkat atau ucapan terima kasih
+  const greetings = /^(halo|hai|hi|hello|pagi|siang|sore|malam|assalamualaikum|tes|test|terima kasih|makasih|thanks|thank you|ok|oke|siap)[.!? ]*$/i;
+  if (greetings.test(text)) return false;
+
+  // Abaikan pertanyaan seputar identitas bot KeraVokasi
+  if (/^(siapa kamu|kamu siapa|apa itu keravokasi|tentang keravokasi|profil keravokasi)/i.test(text)) {
+    return false;
+  }
+
+  // Cek apakah menanyakan sekolah di luar DB (SMKN 1, 2, 7, 8, 9, dst, atau SMK swasta lain)
+  const otherSchoolRegex = /\b(smkn?\s*(1|2|7|8|9|10|11|12|13)|smk\s+pgri|smk\s+muhammadiyah|smk\s+cor\s*jesu|smk\s+widyagama|smk\s+bina\s*cendekia|smk\s+singosari|smk\s+angkasa|smk\s+penerbangan|smk\s+kesehatan|smk\s+nasional|smk\s+sriwedari|smk\s+shalahuddin)\b/i;
+  if (otherSchoolRegex.test(text)) {
+    return true;
+  }
+
+  // Cek apakah menyebut SMK / sekolah / jurusan di Malang
+  const mentionsVocational = /\b(smk|smkn|kejuruan|vokasi|stm|smea|sekolah)\b/i.test(text);
+  const mentionsMalang = /\b(malang|jatim|jawa timur)\b/i.test(text);
+
+  // Jika menanyakan sekolah yang ada di DB (Telkom, 3, 4, 5, 6)
+  const mentionsDbSchool = /\b(smk\s*telkom|moklet|smkn?\s*3|smkn?\s*4|smkn?\s*5|smkn?\s*6)\b/i.test(text);
+
+  if (mentionsDbSchool) {
+    // Jika menanyakan hal dinamis yang tidak tercatat di DB (kepala sekolah, biaya spesifik sekolah negeri, akreditasi, berita)
+    const dynamicTopics = /\b(kepala sekolah|kepsek|biaya|spp|uang gedung|akreditasi|ranking|peringkat|berita|alumni|reuni|prestasi terbaru)\b/i;
+    if (dynamicTopics.test(text)) {
+      return true;
+    }
+    // Jika pertanyaan standar (jurusan, profil, fasilitas, kontak, alamat, ppdb), database sudah lengkap
+    return false;
+  }
+
+  // Jika menanyakan topik kejuruan/jurusan secara umum yang melibatkan Malang
+  if (mentionsVocational && mentionsMalang) {
+    return true;
+  }
+
+  // Jika user bertanya spesifik tentang jurusan tertentu di Malang (misal: "adakah jurusan penerbangan di Malang?")
+  if (mentionsMalang && /\b(jurusan|ada gak|apakah ada)\b/i.test(text)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Memformat hasil pencarian Tavily menjadi teks ringkas dan terstruktur untuk Gemini.
+ */
+export function formatTavilyResults(response) {
+  if (!response) return "";
+  const { answer, results = [], query } = response;
+  const parts = [];
+  if (query) {
+    parts.push(`Kata Kunci Pencarian: ${query}`);
+  }
+  if (answer && answer.trim()) {
+    parts.push(`Ringkasan Jawaban Web: ${answer.trim()}`);
+  }
+  if (Array.isArray(results) && results.length > 0) {
+    parts.push("Rincian Hasil Web:");
+    results.slice(0, 3).forEach((item, idx) => {
+      const title = item.title || "Tanpa Judul";
+      const url = item.url ? ` | Sumber: ${item.url}` : "";
+      const content = item.content ? `\nIsi: ${item.content.trim()}` : "";
+      parts.push(`[Web ${idx + 1}] ${title}${url}${content}`);
+    });
+  }
+  return parts.join("\n\n");
+}
+
+/**
+ * Melakukan pencarian web menggunakan SDK Tavily.
+ */
+export async function searchWebFallback(query, client = getTavilyClient()) {
+  if (!client) return null;
+  try {
+    const isMalangSpecified = /malang|jatim|jawa timur/i.test(query);
+    const searchQuery = isMalangSpecified ? query : `${query} SMK Malang`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // batas timeout pencarian 8 detik
+
+    const res = await Promise.race([
+      client.search(searchQuery, {
+        searchDepth: "basic",
+        maxResults: 3,
+        includeAnswer: true,
+      }),
+      new Promise((_, reject) => {
+        controller.signal.addEventListener("abort", () => {
+          reject(new Error("Pencarian Tavily melebihi batas waktu (timeout)"));
+        });
+      }),
+    ]).finally(() => clearTimeout(timeout));
+
+    return res;
+  } catch (err) {
+    console.warn("[Tavily] Pencarian web gagal atau dilewati:", err?.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Menyusun system prompt yang membatasi jawaban Gemini berdasarkan database pengetahuan, dokumen panduan, dan pencarian web (Tavily).
+ */
+export function buildSystemPrompt(items = loadKnowledgeBase(), guideDoc = loadGuideDocument(), webResults = null) {
   if (process.env.SYSTEM_PROMPT) {
     return process.env.SYSTEM_PROMPT;
   }
@@ -157,33 +287,39 @@ export function buildSystemPrompt(items = loadKnowledgeBase(), guideDoc = loadGu
     guideSection = `\n=== SUMBER 2: DOKUMEN PANDUAN MEMILIH JURUSAN SMK DI MALANG ===\n${guideDoc.trim()}\n===============================================================\n`;
   }
 
-  return `Kamu adalah KeraVokasi, asisten AI resmi yang cerdas, ramah, dan solutif seputar sekolah kejuruan (SMK) di Malang, termasuk SMK Telkom Malang serta SMK lainnya (seperti SMKN 3 Malang, SMKN 4 Malang, SMKN 5 Malang, dan SMKN 6 Malang) yang tercatat di database dan dokumen panduan kami.
+  let tavilySection = "";
+  if (webResults && typeof webResults === "string" && webResults.trim().length > 0) {
+    tavilySection = `\n=== SUMBER 3: PENCARIAN WEB TERBARU (TAVILY) ===\n${webResults.trim()}\n=================================================\n`;
+  }
+
+  return `Kamu adalah KeraVokasi, asisten AI resmi yang cerdas, ramah, dan solutif seputar sekolah kejuruan (SMK) di Malang, termasuk SMK Telkom Malang serta SMK lainnya (seperti SMKN 1, SMKN 2, SMKN 3, SMKN 4, SMKN 5, SMKN 6, dan SMK lain di Malang) yang tercatat di database, dokumen panduan, maupun pencarian web kami.
 
 ATURAN UTAMA (SANGAT KETAT):
 1. IDENTITAS & BRAND: Perkenalkan dirimu sebagai "KeraVokasi", asisten AI informasi SMK di Malang. Jangan pernah menyebut dirimu dengan nama lain seperti Moklet Assistant atau Moka.
-2. DUA SUMBER INFORMASI RESMI:
-   - SUMBER 1 (DATABASE): Berisi data spesifik profil, jurusan, kontak resmi, alamat, fasilitas, dan PPDB tiap sekolah.
+2. TIGA SUMBER INFORMASI RESMI:
+   - SUMBER 1 (DATABASE): Berisi data spesifik profil, jurusan, kontak resmi, alamat, fasilitas, dan PPDB tiap sekolah yang ada di database (SMK Telkom, SMKN 3, SMKN 4, SMKN 5, SMKN 6).
    - SUMBER 2 (DOKUMEN PANDUAN): Berisi panduan pemilihan jurusan berdasarkan minat, bakat, perbandingan jurusan (misal perbedaan RPL vs TKJ), tips karier, dan ringkasan bidang keahlian di Malang.
-   - Jawablah pertanyaan pengguna berdasarkan kedua sumber informasi resmi di bawah. Jika pengguna meminta saran jurusan sesuai minat (misal: "saya suka game cocoknya apa", "beda RPL dan TKJ apa"), manfaatkan SUMBER 2 secara maksimal dan padukan dengan SUMBER 1.
-3. TIDAK BOLEH MENGARANG: JANGAN pernah mengarang atau berspekulasi di luar informasi yang ada di kedua sumber tersebut.
+   - SUMBER 3 (PENCARIAN WEB TERBARU): Jika tersedia, berisi informasi terkini dari hasil pencarian web terpercaya melalui Tavily mengenai SMK di Malang di luar database (seperti SMKN 1, SMKN 2, SMKN 7, SMK PGRI, SMK swasta lainnya di Malang) atau informasi terbaru yang tidak ada di SUMBER 1 dan 2.
+   - Jawablah pertanyaan pengguna berdasarkan ketiga sumber informasi resmi tersebut. Jika pengguna meminta saran jurusan sesuai minat, manfaatkan SUMBER 2 secara maksimal dan padukan dengan SUMBER 1 atau SUMBER 3.
+3. TIDAK BOLEH MENGARANG: Jawablah hanya berdasarkan data yang ada pada ketiga sumber di atas. Jangan mengarang atau berspekulasi jika informasi tidak ditemukan.
 4. PERTANYAAN DI LUAR SUMBER ATAU DATA BELUM TERSEDIA:
    - Jika pengguna menanyakan hal umum yang tidak ada kaitannya dengan sekolah/SMK di Malang (misalnya resep masakan, cuaca kota lain, politik luar negeri), tolak dengan santun dan jelaskan bahwa fokus KeraVokasi adalah seputar informasi SMK di Malang.
-   - Jika pengguna menanyakan info tentang SMK Telkom Malang tetapi datanya belum ada: sampaikan bahwa informasi resmi tersebut belum tersedia di data kami, lalu arahkan untuk menghubungi kontak resmi:
+   - Jika pengguna menanyakan info tentang SMK Telkom Malang tetapi datanya belum ada di sumber: sampaikan bahwa informasi resmi tersebut belum tersedia di data kami, lalu arahkan untuk menghubungi kontak resmi:
      * Call Center / WhatsApp: 0812-2348-8999
      * Telepon Kantor: 0341-712500
      * Email: info@smktelkom-mlg.sch.id
-     * Website: smktelkom-mlg.sch.id / ppdb.smktelkom-mlg.sch.id
+     * Website: https://smktelkom-mlg.sch.id / https://ppdb.smktelkom-mlg.sch.id
      * Instagram & TikTok: @smktelkommalang
      * Jam Layanan: Senin - Sabtu pukul 06.00 - 16.00 WIB (Minggu tutup)
-   - Jika menanyakan sekolah lain (seperti SMKN 3, 4, 5, 6) yang informasinya belum tercatat lengkap, arahkan ke kontak resmi sekolah tersebut yang ada di database atau dinas pendidikan setempat.
+   - Jika menanyakan sekolah negeri atau swasta lain di Malang yang informasinya belum lengkap di ketiga sumber, arahkan ke website resmi sekolah terkait atau Dinas Pendidikan Provinsi Jawa Timur.
 5. FORMAT JAWABAN (SANGAT BERSIH & RAPI):
    - Gunakan format teks standar yang rapi dan mudah dibaca.
    - BOLD: Gunakan tanda bintang ganda **teks** untuk judul bagian atau penekanan (contoh: **Alamat:**, **Jurusan:**). JANGAN gunakan bintang satu atau bintang acak di tengah kalimat.
    - BULLET LIST: Gunakan tanda strip '-' atau titik bulat '•' diikuti spasi pada baris baru untuk daftar rincian.
-   - LINK: Jika mencantumkan alamat website, tuliskan link lengkap yang dapat diklik langsung (contoh: https://smkn4malang.sch.id). Jangan membuat format markdown link yang berantakan atau tertutup tanda bintang aneh seperti '*Website:* [link]'.
+   - LINK: Jika mencantumkan alamat website atau tautan sumber, tuliskan link lengkap yang dapat diklik langsung (contoh: https://smkn4malang.sch.id). Jangan membuat format markdown link yang berantakan atau tertutup tanda bintang aneh seperti '*Website:* [link]'.
    - Jaga agar spasi dan baris tersusun rapi tanpa simbol aneh atau tanda baca berulang.
-6. NATURAL: Jangan menyebutkan istilah teknis seperti "berdasarkan database di atas" atau "menurut prompt sistem". Jawablah langsung secara alami sebagai KeraVokasi.
-${knowledgeSection}${guideSection}`;
+6. NATURAL: Jangan menyebutkan istilah teknis seperti "berdasarkan database di atas", "menurut dokumen panduan", atau "berdasarkan pencarian tavily". Jawablah langsung secara alami, ramah, dan solutif sebagai KeraVokasi.
+${knowledgeSection}${guideSection}${tavilySection}`;
 }
 
 // ---------- Helper ----------
@@ -304,7 +440,12 @@ export function toClientError(err) {
 }
 
 // ---------- App ----------
-export function createApp({ generate, retries = MAX_RETRIES, retryDelayMs = RETRY_DELAY_MS }) {
+export function createApp({
+  generate,
+  searchWeb = searchWebFallback,
+  retries = MAX_RETRIES,
+  retryDelayMs = RETRY_DELAY_MS,
+}) {
   const app = express();
 
   app.use(cors(corsOptions));
@@ -339,7 +480,22 @@ export function createApp({ generate, retries = MAX_RETRIES, retryDelayMs = RETR
     try {
       const contents = toGeminiContents(parsed.history, parsed.message);
       const items = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
-      const currentPrompt = buildSystemPrompt(items);
+      const guideDoc = loadGuideDocument();
+
+      // Cek apakah memerlukan pencarian web (Tavily)
+      let webResultsText = "";
+      if (typeof searchWeb === "function" && shouldPerformWebSearch(parsed.message)) {
+        try {
+          const tavilyRes = await searchWeb(parsed.message);
+          if (tavilyRes) {
+            webResultsText = formatTavilyResults(tavilyRes);
+          }
+        } catch (searchErr) {
+          console.warn("[Tavily search skipped]", searchErr?.message ?? searchErr);
+        }
+      }
+
+      const currentPrompt = buildSystemPrompt(items, guideDoc, webResultsText);
       const reply = await withRetry(() => generate(contents, currentPrompt), {
         retries,
         delayMs: retryDelayMs,
@@ -388,6 +544,7 @@ if (isMain) {
     console.log(`Backend berjalan di http://localhost:${PORT} (model: ${MODEL_NAME})`);
     console.log(`Timeout ${TIMEOUT_MS} ms, coba ulang maks ${MAX_RETRIES}x`);
     console.log(`CORS diizinkan untuk: ${rawOrigins.join(", ")}`);
+    console.log(`Tavily Web Search: ${process.env.TAVILY_API_KEY ? "Aktif" : "Tidak aktif (TAVILY_API_KEY kosong)"}`);
 
     // Coba sambungkan ke database MySQL online (Railway)
     const dbItems = await fetchKnowledgeFromDb();

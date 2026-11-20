@@ -1,6 +1,14 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createApp, toGeminiContents, loadKnowledgeBase, buildSystemPrompt } from "../server.js";
+import {
+  createApp,
+  toGeminiContents,
+  loadKnowledgeBase,
+  buildSystemPrompt,
+  shouldPerformWebSearch,
+  formatTavilyResults,
+  searchWebFallback,
+} from "../server.js";
 
 let server, base, lastContents;
 
@@ -209,5 +217,143 @@ test("buildSystemPrompt menyusun instruksi ketat dengan database pengetahuan", (
   assert.ok(prompt.includes("ATURAN UTAMA (SANGAT KETAT)"));
   assert.ok(prompt.includes("0812-2348-8999"));
   assert.ok(prompt.includes("DATABASE PENGETAHUAN RESMI SMK TELKOM MALANG"));
+});
+
+// ---------- Pengujian Fitur Tavily Search ----------
+test("shouldPerformWebSearch: false jika TAVILY_API_KEY tidak ada", () => {
+  const origKey = process.env.TAVILY_API_KEY;
+  delete process.env.TAVILY_API_KEY;
+  try {
+    assert.equal(shouldPerformWebSearch("SMKN 2 Malang"), false);
+  } finally {
+    if (origKey) process.env.TAVILY_API_KEY = origKey;
+  }
+});
+
+test("shouldPerformWebSearch: mendeteksi kebutuhan pencarian dengan benar saat TAVILY_API_KEY aktif", () => {
+  const origKey = process.env.TAVILY_API_KEY;
+  process.env.TAVILY_API_KEY = "tvly-test-key";
+  try {
+    // Sapaan / identitas -> tidak perlu search
+    assert.equal(shouldPerformWebSearch("halo"), false);
+    assert.equal(shouldPerformWebSearch("selamat pagi"), false);
+    assert.equal(shouldPerformWebSearch("siapa kamu"), false);
+    assert.equal(shouldPerformWebSearch("terima kasih"), false);
+
+    // Pertanyaan standar sekolah di DB (SMKN 4, Telkom) -> tidak perlu search
+    assert.equal(shouldPerformWebSearch("apa jurusan di SMKN 4 Malang?"), false);
+    assert.equal(shouldPerformWebSearch("berapa nomor telepon SMK Telkom?"), false);
+
+    // Pertanyaan sekolah di luar DB (SMKN 1, SMKN 2, SMK PGRI, SMK Penerbangan) -> search aktif!
+    assert.equal(shouldPerformWebSearch("apakah SMKN 2 Malang punya jurusan tata boga?"), true);
+    assert.equal(shouldPerformWebSearch("apa saja jurusan di SMKN 1 Malang?"), true);
+    assert.equal(shouldPerformWebSearch("info pendaftaran SMK PGRI 3 Malang"), true);
+
+    // Pertanyaan dinamis sekolah DB yang belum ada di DB (kepala sekolah, biaya spesifik) -> search aktif!
+    assert.equal(shouldPerformWebSearch("siapa kepala sekolah SMKN 5 Malang sekarang?"), true);
+
+    // Pertanyaan topik vokasi / kejuruan di Malang secara umum -> search aktif!
+    assert.equal(shouldPerformWebSearch("apakah ada jurusan perkapalan di SMK Malang?"), true);
+  } finally {
+    if (origKey) process.env.TAVILY_API_KEY = origKey;
+    else delete process.env.TAVILY_API_KEY;
+  }
+});
+
+test("formatTavilyResults memformat jawaban dan link web dengan rapi", () => {
+  const mockResponse = {
+    query: "SMKN 2 Malang jurusan",
+    answer: "SMKN 2 Malang memiliki program keahlian Kuliner (Tata Boga), Perhotelan, dan Usaha Layanan Pariwisata.",
+    results: [
+      {
+        title: "SMKN 2 Malang - Profil",
+        url: "https://smkn2malang.sch.id",
+        content: "SMKN 2 Malang beralamat di Jl. Veteran No. 17 Malang dengan jurusan unggulan Tata Boga dan Perhotelan.",
+      },
+    ],
+  };
+
+  const formatted = formatTavilyResults(mockResponse);
+  assert.ok(formatted.includes("SMKN 2 Malang jurusan"));
+  assert.ok(formatted.includes("Ringkasan Jawaban Web:"));
+  assert.ok(formatted.includes("https://smkn2malang.sch.id"));
+  assert.ok(formatted.includes("Tata Boga dan Perhotelan"));
+
+  // Input null atau kosong tidak error
+  assert.equal(formatTavilyResults(null), "");
+  assert.equal(formatTavilyResults({}), "");
+});
+
+test("buildSystemPrompt menyertakan SUMBER 3 jika webResults diberikan", () => {
+  const webResults = "Ringkasan: SMKN 2 Malang memiliki jurusan Kuliner.";
+  const prompt = buildSystemPrompt([], "", webResults);
+  assert.ok(prompt.includes("=== SUMBER 3: PENCARIAN WEB TERBARU (TAVILY) ==="));
+  assert.ok(prompt.includes("SMKN 2 Malang memiliki jurusan Kuliner."));
+});
+
+test("POST /chat menggunakan searchWeb mock saat menanyakan sekolah di luar DB", async () => {
+  const origKey = process.env.TAVILY_API_KEY;
+  process.env.TAVILY_API_KEY = "tvly-test-key";
+
+  let searchCalledWith = null;
+  let receivedPrompt = null;
+
+  const mockSearch = async (query) => {
+    searchCalledWith = query;
+    return {
+      query,
+      answer: "SMKN 2 Malang memiliki program Tata Boga.",
+      results: [
+        {
+          title: "SMKN 2 Malang",
+          url: "https://smkn2malang.sch.id",
+          content: "Sekolah kejuruan bidang pariwisata dan boga di Malang.",
+        },
+      ],
+    };
+  };
+
+  const mockGenerate = async (contents, systemInstruction) => {
+    receivedPrompt = systemInstruction;
+    return "Ya, SMKN 2 Malang memiliki jurusan Tata Boga.";
+  };
+
+  try {
+    await withServer(mockGenerate, async (send) => {
+      const res = await send({ message: "Apakah SMKN 2 Malang punya jurusan Tata Boga?" });
+      assert.equal(res.status, 200);
+      const json = await res.json();
+      assert.equal(json.reply, "Ya, SMKN 2 Malang memiliki jurusan Tata Boga.");
+      assert.equal(searchCalledWith, "Apakah SMKN 2 Malang punya jurusan Tata Boga?");
+      assert.ok(receivedPrompt.includes("=== SUMBER 3: PENCARIAN WEB TERBARU (TAVILY) ==="));
+      assert.ok(receivedPrompt.includes("SMKN 2 Malang memiliki program Tata Boga."));
+    }, { searchWeb: mockSearch });
+  } finally {
+    if (origKey) process.env.TAVILY_API_KEY = origKey;
+    else delete process.env.TAVILY_API_KEY;
+  }
+});
+
+test("POST /chat tetap sukses jika searchWeb mengalami kegagalan", async () => {
+  const origKey = process.env.TAVILY_API_KEY;
+  process.env.TAVILY_API_KEY = "tvly-test-key";
+
+  const failingSearch = async () => {
+    throw new Error("Tavily service timeout");
+  };
+
+  const mockGenerate = async () => "Jawaban fallback tanpa web search";
+
+  try {
+    await withServer(mockGenerate, async (send) => {
+      const res = await send({ message: "Info SMKN 2 Malang" });
+      assert.equal(res.status, 200);
+      const json = await res.json();
+      assert.equal(json.reply, "Jawaban fallback tanpa web search");
+    }, { searchWeb: failingSearch });
+  } finally {
+    if (origKey) process.env.TAVILY_API_KEY = origKey;
+    else delete process.env.TAVILY_API_KEY;
+  }
 });
 
