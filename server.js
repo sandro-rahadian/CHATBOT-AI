@@ -72,23 +72,58 @@ export function getDbPool() {
 }
 
 /**
- * Mengambil data terbaru dari MySQL database online (chatbot_sekolah).
+ * Mengambil data terbaru dari MySQL database online dengan menggabungkan tabel-tabel relasional terpisah:
+ * (school_profiles, school_majors, school_address_contacts, school_ppdb, school_facilities, school_activities)
+ * yang masing-masing berelasi ke tabel induk `schools` melalui foreign key `school_id`.
  */
 export async function fetchKnowledgeFromDb() {
   const pool = getDbPool();
   if (!pool) return null;
   try {
-    const [rows] = await pool.query(`
-      SELECT k.id, k.category, k.title, k.content, k.keywords, s.name AS school_name
-      FROM knowledge k
-      LEFT JOIN schools s ON k.school_id = s.id
-      ORDER BY k.id ASC
-    `);
+    const query = `
+      SELECT p.id, s.name AS school_name, 'Profil' AS category, p.title, p.content, p.keywords
+      FROM school_profiles p
+      JOIN schools s ON p.school_id = s.id
+
+      UNION ALL
+
+      SELECT m.id, s.name AS school_name, 'Jurusan' AS category, m.title, m.content, m.keywords
+      FROM school_majors m
+      JOIN schools s ON m.school_id = s.id
+
+      UNION ALL
+
+      SELECT c.id, s.name AS school_name, 'Alamat & Kontak' AS category, c.title, c.content, c.keywords
+      FROM school_address_contacts c
+      JOIN schools s ON c.school_id = s.id
+
+      UNION ALL
+
+      SELECT b.id, s.name AS school_name, 'PPDB' AS category, b.title, b.content, b.keywords
+      FROM school_ppdb b
+      JOIN schools s ON b.school_id = s.id
+
+      UNION ALL
+
+      SELECT f.id, s.name AS school_name, 'Fasilitas' AS category, f.title, f.content, f.keywords
+      FROM school_facilities f
+      JOIN schools s ON f.school_id = s.id
+
+      UNION ALL
+
+      SELECT a.id, s.name AS school_name, 'Ekstrakurikuler' AS category, a.title, a.content, a.keywords
+      FROM school_activities a
+      JOIN schools s ON a.school_id = s.id
+
+      ORDER BY school_name ASC, category ASC, id ASC;
+    `;
+
+    const [rows] = await pool.query(query);
     if (Array.isArray(rows) && rows.length > 0) {
       return rows;
     }
   } catch (err) {
-    console.warn("[MySQL] Gagal mengambil data dari database online:", err?.message ?? err);
+    console.warn("[MySQL] Gagal mengambil data antar-tabel dari database online:", err?.message ?? err);
   }
   return null;
 }
