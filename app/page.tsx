@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   User,
@@ -11,6 +12,8 @@ import {
   LogOut,
   Check,
   BookOpen,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -214,7 +217,19 @@ function AccountSwitcher({
       : "-";
 
   return (
-    <div className="fixed top-5 right-4 sm:right-6 z-50">
+    <div className="fixed top-5 right-4 sm:right-6 z-50 flex items-center gap-2">
+      {role === "guest" && (
+        <Link href="/login">
+          <Button
+            size="sm"
+            className="bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-full text-xs font-semibold px-3 py-1 h-8 shadow-md cursor-pointer transition-all"
+          >
+            <LogIn className="w-3.5 h-3.5 mr-1" />
+            <span className="hidden sm:inline">Masuk</span>
+          </Button>
+        </Link>
+      )}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -392,6 +407,23 @@ function AccountSwitcher({
                 </DropdownMenuItem>
               );
             })}
+          </DropdownMenuGroup>
+
+          {/* Navigation to Full Auth Pages */}
+          <DropdownMenuSeparator className="bg-[#383a40]" />
+          <DropdownMenuGroup className="flex flex-col gap-1">
+            <DropdownMenuItem asChild className="p-2 rounded-xl cursor-pointer focus:bg-[#383a40]">
+              <Link href="/login" className="flex items-center gap-2 text-xs text-[#dbdee1] hover:text-white">
+                <LogIn className="w-3.5 h-3.5 text-[#5865f2]" />
+                <span>Buka Halaman Login</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="p-2 rounded-xl cursor-pointer focus:bg-[#383a40]">
+              <Link href="/signup" className="flex items-center gap-2 text-xs text-[#dbdee1] hover:text-white">
+                <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Daftar Akun Baru</span>
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
