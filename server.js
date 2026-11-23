@@ -647,6 +647,270 @@ export function toClientError(err) {
   return { status: 502, error: "Gagal menghubungi Gemini API" };
 }
 
+// ---------- RBAC & Hak Akses Pengguna ----------
+const guestQuotaMap = new Map();
+
+export const DEFAULT_USERS = [
+  {
+    id: 1,
+    username: "budi_siswa",
+    api_token: "token-siswa-123",
+    role: "siswa",
+    school_id: null,
+    allowed_categories: ["Alamat & Kontak", "Pendaftaran", "Jurusan", "Fasilitas"],
+    daily_limit: 50,
+    daily_count: 0,
+    can_web_search: false,
+  },
+  {
+    id: 2,
+    username: "pak_andi_guru",
+    api_token: "token-guru-456",
+    role: "guru",
+    school_id: null,
+    allowed_categories: ["Profil", "Alamat & Kontak", "Pendaftaran", "Jurusan", "Fasilitas", "Kegiatan", "Hasil riset web"],
+    daily_limit: 200,
+    daily_count: 0,
+    can_web_search: true,
+  },
+  {
+    id: 3,
+    username: "admin_utama",
+    api_token: "token-admin-789",
+    role: "admin",
+    school_id: null,
+    allowed_categories: ["*"],
+    daily_limit: null,
+    daily_count: 0,
+    can_web_search: true,
+  },
+];
+
+/**
+ * Mendeteksi topik/kategori pertanyaan pengguna untuk pembatasan RBAC.
+ */
+export function detectQuestionCategory(message) {
+  if (typeof message !== "string") return null;
+  const text = message.toLowerCase();
+
+  if (/\b(profil|tentang sekolah|sejarah|berdiri|didirikan|yayasan|visi|misi|kepala sekolah|kepsek|akreditasi|kurikulum)\b/i.test(text)) {
+    return "Profil";
+  }
+  if (/\b(alamat|lokasi|dimana|letak|maps|rute|telepon|telp|nomor telepon|wa|whatsapp|email|website|fax|kontak)\b/i.test(text)) {
+    return "Alamat & Kontak";
+  }
+  if (/\b(ppdb|daftar|pendaftaran|siswa baru|syarat masuk|persyaratan|biaya|spp|uang gedung|gelombang|jadwal)\b/i.test(text)) {
+    return "Pendaftaran";
+  }
+  if (/\b(jurusan|kompetensi keahlian|program studi|prodi|rpl|tkj|dkv|animasi|kuliner|tata boga|perhotelan|mekatronika|logistik)\b/i.test(text)) {
+    return "Jurusan";
+  }
+  if (/\b(fasilitas|sarana|prasarana|lab|laboratorium|bengkel|lapangan|perpustakaan|perpus|gedung)\b/i.test(text)) {
+    return "Fasilitas";
+  }
+  if (/\b(ekskul|ekstrakurikuler|kegiatan|organisasi|osis|pramuka|paskibra|basket|futsal|silat|pmr)\b/i.test(text)) {
+    return "Kegiatan";
+  }
+
+  return null;
+}
+
+/**
+ * Memeriksa apakah kategori diizinkan untuk daftar kategori user.
+ */
+export function isCategoryAllowed(category, allowedCategories) {
+  if (!category) return true;
+  if (!Array.isArray(allowedCategories)) return false;
+  if (allowedCategories.includes("*")) return true;
+
+  const normalize = (cat) => {
+    const c = String(cat).toLowerCase();
+    if (c.includes("daftar") || c.includes("ppdb")) return "Pendaftaran";
+    if (c.includes("ekskul") || c.includes("kegiatan")) return "Kegiatan";
+    if (c.includes("alamat") || c.includes("kontak")) return "Alamat & Kontak";
+    if (c.includes("jurusan")) return "Jurusan";
+    if (c.includes("profil")) return "Profil";
+    if (c.includes("fasilitas")) return "Fasilitas";
+    return cat;
+  };
+
+  const target = normalize(category);
+  return allowedCategories.some((allowed) => normalize(allowed) === target);
+}
+
+/**
+ * Memvalidasi token x-api-token dan mengembalikan profil hak akses serta sisa kuota harian.
+ */
+export async function resolveUserAccess(apiToken, clientIp = "127.0.0.1") {
+  const pool = getDbPool();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1. Jika token disediakan, cek di database users
+  if (apiToken && typeof apiToken === "string" && apiToken.trim() !== "") {
+    if (pool) {
+      try {
+        const [rows] = await pool.query(`
+          SELECT u.*, r.allowed_categories AS role_categories, r.daily_limit AS role_daily_limit, r.can_web_search AS role_web_search
+          FROM users u
+          JOIN role_permissions r ON u.role = r.role
+          WHERE u.api_token = ?
+          LIMIT 1
+        `, [apiToken.trim()]);
+
+        if (Array.isArray(rows) && rows.length > 0) {
+          const user = rows[0];
+
+          // Reset kuota harian jika tanggal berbeda
+          let dailyCount = user.daily_count;
+          const userLastReset = user.last_reset ? new Date(user.last_reset).toISOString().slice(0, 10) : "";
+          if (userLastReset !== today) {
+            dailyCount = 0;
+            await pool.query("UPDATE users SET daily_count = 0, last_reset = ? WHERE id = ?", [today, user.id]);
+          }
+
+          let allowedCategories = ["*"];
+          try {
+            if (user.allowed_categories) {
+              allowedCategories = typeof user.allowed_categories === "string" ? JSON.parse(user.allowed_categories) : user.allowed_categories;
+            } else if (user.role_categories) {
+              allowedCategories = typeof user.role_categories === "string" ? JSON.parse(user.role_categories) : user.role_categories;
+            }
+          } catch {
+            allowedCategories = ["*"];
+          }
+
+          const dailyLimit = user.daily_limit !== null && user.daily_limit !== undefined ? user.daily_limit : user.role_daily_limit;
+          const remainingQuota = dailyLimit === null || dailyLimit === undefined ? null : Math.max(0, dailyLimit - dailyCount);
+          const canWebSearch = user.role === "admin" || user.role === "guru" || Boolean(user.role_web_search);
+
+          return {
+            valid: true,
+            user: {
+              id: user.id,
+              username: user.username,
+              role: user.role,
+              schoolId: user.school_id,
+              allowedCategories,
+              dailyLimit,
+              remainingQuota,
+              canWebSearch,
+            },
+          };
+        }
+      } catch (err) {
+        console.warn("[RBAC] Gagal mencari user token:", err?.message ?? err);
+      }
+    } else {
+      // Fallback lokal / offline jika database tidak aktif
+      const def = DEFAULT_USERS.find((u) => u.api_token === apiToken.trim());
+      if (def) {
+        return {
+          valid: true,
+          user: {
+            id: def.id,
+            username: def.username,
+            role: def.role,
+            schoolId: def.school_id,
+            allowedCategories: def.allowed_categories,
+            dailyLimit: def.daily_limit,
+            remainingQuota: def.daily_limit === null ? null : def.daily_limit - def.daily_count,
+            canWebSearch: def.can_web_search,
+          },
+        };
+      }
+    }
+    // Token dikirimkan tapi tidak ditemukan
+    return {
+      valid: false,
+      error: "Token tidak valid. Periksa kembali header x-api-token Anda.",
+    };
+  }
+
+  // 2. Jika tanpa token -> Role Guest
+  let guestDailyCount = 0;
+  const ipKey = clientIp || "127.0.0.1";
+  const guestUsage = guestQuotaMap.get(ipKey);
+  if (guestUsage && guestUsage.date === today) {
+    guestDailyCount = guestUsage.count;
+  } else {
+    guestQuotaMap.set(ipKey, { count: 0, date: today });
+  }
+
+  const guestLimit = 10;
+  const guestRemaining = Math.max(0, guestLimit - guestDailyCount);
+
+  return {
+    valid: true,
+    user: {
+      id: null,
+      username: "guest",
+      role: "guest",
+      schoolId: null,
+      allowedCategories: ["Alamat & Kontak", "Pendaftaran"],
+      dailyLimit: guestLimit,
+      remainingQuota: guestRemaining,
+      canWebSearch: false,
+      clientIp: ipKey,
+    },
+  };
+}
+
+/**
+ * Mengurangi sisa kuota (increment daily_count) setelah pesan berhasil dijawab.
+ */
+export async function consumeUserQuota(userAccess) {
+  const pool = getDbPool();
+  const user = userAccess?.user;
+  if (!user) return;
+
+  if (user.role === "admin" || user.dailyLimit === null) {
+    return; // Admin / unlimited tidak dikurangi
+  }
+
+  if (user.id && pool) {
+    try {
+      await pool.query("UPDATE users SET daily_count = daily_count + 1 WHERE id = ?", [user.id]);
+    } catch (err) {
+      console.warn("[RBAC] Gagal menambah daily_count:", err?.message ?? err);
+    }
+  } else if (user.role === "guest" && user.clientIp) {
+    const today = new Date().toISOString().slice(0, 10);
+    const curr = guestQuotaMap.get(user.clientIp) || { count: 0, date: today };
+    guestQuotaMap.set(user.clientIp, { count: curr.count + 1, date: today });
+  }
+}
+
+/**
+ * Mengekstrak sumber data (sources) yang relevan dari database untuk response chat.
+ */
+export function extractSources(message, reply, items = []) {
+  const sources = [];
+  const text = `${message} ${reply}`.toLowerCase();
+
+  for (const item of items) {
+    const school = (item.school_name || "").toLowerCase();
+    const cleanSchool = school.replace("smk negeri", "smkn").replace("smk ", "");
+    const title = (item.title || "").toLowerCase();
+
+    const matchesSchool = cleanSchool && text.includes(cleanSchool);
+    const matchesTitle = title.split(/\s+/).some((w) => w.length > 4 && text.includes(w));
+
+    if (matchesSchool && matchesTitle) {
+      if (!sources.some((s) => s.id === item.id)) {
+        sources.push({
+          id: item.id,
+          school: item.school_name,
+          category: item.category,
+          title: item.title,
+        });
+      }
+    }
+    if (sources.length >= 3) break;
+  }
+
+  return sources;
+}
+
 // ---------- App ----------
 export function createApp({
   generate,
@@ -661,12 +925,134 @@ export function createApp({
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
+  // GET /users - Mengambil daftar akun terdaftar untuk komponen dropdown antarmuka demo
+  app.get("/users", async (_req, res) => {
+    const pool = getDbPool();
+    if (!pool) {
+      return res.json({
+        users: [
+          { id: 1, username: "budi_siswa", role: "siswa", school_id: null, allowed_categories: null, daily_limit: null },
+          { id: 2, username: "pak_andi_guru", role: "guru", school_id: null, allowed_categories: null, daily_limit: null },
+          { id: 3, username: "admin_utama", role: "admin", school_id: null, allowed_categories: null, daily_limit: null },
+        ],
+      });
+    }
+    try {
+      const [users] = await pool.query(
+        "SELECT id, username, role, school_id, allowed_categories, daily_limit FROM users ORDER BY id ASC"
+      );
+      return res.json({ users });
+    } catch (err) {
+      console.warn("[GET /users] Error:", err?.message ?? err);
+      return res.status(500).json({ error: "Gagal mengambil daftar user." });
+    }
+  });
+
+  // POST /login - Login pengguna dan mengembalikan token serta sisa kuota
+  app.post("/login", async (req, res) => {
+    const { username } = req.body ?? {};
+    if (!username || typeof username !== "string" || username.trim() === "") {
+      return res.status(400).json({ error: "Username wajib diisi." });
+    }
+
+    const pool = getDbPool();
+    if (!pool) {
+      const def = DEFAULT_USERS.find((u) => u.username === username.trim());
+      if (!def) {
+        return res.status(401).json({ error: "Username tidak ditemukan." });
+      }
+      return res.json({
+        message: "Login berhasil",
+        token: def.api_token,
+        user: {
+          username: def.username,
+          role: def.role,
+          schoolId: def.school_id,
+          allowedCategories: def.allowed_categories,
+          dailyLimit: def.daily_limit,
+          remainingQuota: def.daily_limit === null ? null : def.daily_limit - def.daily_count,
+        },
+      });
+    }
+
+    try {
+      const [rows] = await pool.query(`
+        SELECT u.*, r.allowed_categories AS role_categories, r.daily_limit AS role_daily_limit
+        FROM users u
+        JOIN role_permissions r ON u.role = r.role
+        WHERE u.username = ?
+        LIMIT 1
+      `, [username.trim()]);
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(401).json({ error: "Username tidak ditemukan." });
+      }
+
+      const user = rows[0];
+      const today = new Date().toISOString().slice(0, 10);
+      let dailyCount = user.daily_count;
+      const userLastReset = user.last_reset ? new Date(user.last_reset).toISOString().slice(0, 10) : "";
+      if (userLastReset !== today) {
+        dailyCount = 0;
+        await pool.query("UPDATE users SET daily_count = 0, last_reset = ? WHERE id = ?", [today, user.id]);
+      }
+
+      let allowedCategories = ["*"];
+      try {
+        if (user.allowed_categories) {
+          allowedCategories = typeof user.allowed_categories === "string" ? JSON.parse(user.allowed_categories) : user.allowed_categories;
+        } else if (user.role_categories) {
+          allowedCategories = typeof user.role_categories === "string" ? JSON.parse(user.role_categories) : user.role_categories;
+        }
+      } catch {
+        allowedCategories = ["*"];
+      }
+
+      const dailyLimit = user.daily_limit !== null && user.daily_limit !== undefined ? user.daily_limit : user.role_daily_limit;
+      const remainingQuota = dailyLimit === null || dailyLimit === undefined ? null : Math.max(0, dailyLimit - dailyCount);
+
+      return res.json({
+        message: "Login berhasil",
+        token: user.api_token,
+        user: {
+          username: user.username,
+          role: user.role,
+          schoolId: user.school_id,
+          allowedCategories,
+          dailyLimit,
+          remainingQuota,
+        },
+      });
+    } catch (err) {
+      console.error("[POST /login] Error:", err?.message ?? err);
+      return res.status(500).json({ error: "Terjadi kesalahan pada server saat login." });
+    }
+  });
+
+  // GET /me - Cek profil dan sisa kuota pengguna saat ini
+  app.get("/me", async (req, res) => {
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid) {
+      return res.status(401).json({ error: userAccess.error });
+    }
+
+    const u = userAccess.user;
+    return res.json({
+      username: u.username,
+      role: u.role,
+      schoolId: u.schoolId,
+      allowedCategories: u.allowedCategories,
+      dailyLimit: u.dailyLimit,
+      remainingQuota: u.remainingQuota,
+    });
+  });
+
   // POST /sync - Memperbarui cache dari MySQL online tanpa restart & memproses antrean ACC (approved)
   app.post("/sync", async (_req, res) => {
-    // 1. Proses data approved dari knowledge_pending ke tabel resmi jika ada
     const syncResult = await syncApprovedPendingKnowledge();
-
-    // 2. Refresh cache knowledge items dari database relasional
     const dbItems = await fetchKnowledgeFromDb();
     if (dbItems && dbItems.length > 0) {
       cachedKnowledgeItems = dbItems;
@@ -694,19 +1080,56 @@ export function createApp({
     message: { error: "Terlalu banyak permintaan, coba lagi sebentar lagi" },
   });
 
-  // POST /chat
+  // POST /chat - Chatbot utama dengan RBAC dan isolasi hak akses
   app.post("/chat", chatLimiter, async (req, res) => {
     const parsed = validateChatBody(req.body);
     if (parsed.error) return res.status(400).json({ error: parsed.error });
 
+    // 1. Verifikasi Token & RBAC
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid) {
+      return res.status(401).json({ error: userAccess.error });
+    }
+
+    const { user } = userAccess;
+
+    // 2. Cek Kuota Harian
+    if (user.dailyLimit !== null && user.remainingQuota !== null && user.remainingQuota <= 0) {
+      return res.status(429).json({
+        error: `Kuota pertanyaan harian untuk role '${user.role}' (${user.dailyLimit}x/hari) telah habis.`,
+      });
+    }
+
+    // 3. Cek Izin Topik/Kategori Pertanyaan
+    const detectedCategory = detectQuestionCategory(parsed.message);
+    if (detectedCategory && !isCategoryAllowed(detectedCategory, user.allowedCategories)) {
+      return res.json({
+        reply: `Maaf, akun dengan role '${user.role}' tidak memiliki izin untuk membaca informasi pada topik "${detectedCategory}".`,
+        role: user.role,
+        sources: [],
+      });
+    }
+
     try {
       const contents = toGeminiContents(parsed.history, parsed.message);
-      const items = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
+      let items = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
       const guideDoc = loadGuideDocument();
 
-      // Cek apakah memerlukan pencarian web (Tavily)
+      // Filter database berdasarkan kategori yang diizinkan dan isolasi sekolah (school_id)
+      if (Array.isArray(items) && items.length > 0) {
+        items = items.filter((item) => {
+          const catOk = isCategoryAllowed(item.category, user.allowedCategories);
+          const schoolOk = !user.schoolId || item.school_id === user.schoolId;
+          return catOk && schoolOk;
+        });
+      }
+
+      // Cek apakah memerlukan pencarian web (Tavily) - hanya jika canWebSearch diizinkan (guru & admin)
       let webResultsText = "";
-      if (typeof searchWeb === "function" && shouldPerformWebSearch(parsed.message)) {
+      if (user.canWebSearch && typeof searchWeb === "function" && shouldPerformWebSearch(parsed.message)) {
         try {
           const tavilyRes = await searchWeb(parsed.message);
           if (tavilyRes) {
@@ -729,10 +1152,22 @@ export function createApp({
         onRetry: (err, n) =>
           console.warn(`[Gemini] percobaan ${n} gagal (${err?.status ?? err?.code ?? "error"}), mencoba ulang...`),
       });
+
       if (!reply || !reply.trim()) {
         return res.status(502).json({ error: "Gemini tidak mengembalikan jawaban" });
       }
-      return res.json({ reply });
+
+      // Kurangi kuota harian user setelah pesan berhasil dijawab
+      await consumeUserQuota(userAccess);
+
+      // Ekstrak sumber data referensi resmi
+      const sources = extractSources(parsed.message, reply, items);
+
+      return res.json({
+        reply,
+        role: user.role,
+        sources,
+      });
     } catch (err) {
       console.error("[Gemini error]", err?.message ?? err);
       const { status, error } = toClientError(err);

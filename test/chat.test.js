@@ -8,6 +8,10 @@ import {
   shouldPerformWebSearch,
   formatTavilyResults,
   searchWebFallback,
+  detectQuestionCategory,
+  isCategoryAllowed,
+  resolveUserAccess,
+  extractSources,
 } from "../server.js";
 
 let server, base, lastContents;
@@ -51,7 +55,10 @@ test("POST /chat sukses dan history dikonversi ke format Gemini", async () => {
     ],
   });
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { reply: "Echo: Halo, siapa kamu?" });
+  const json = await res.json();
+  assert.equal(json.reply, "Echo: Halo, siapa kamu?");
+  assert.equal(json.role, "guest");
+  assert.ok(Array.isArray(json.sources));
   assert.deepEqual(
     lastContents.map((c) => c.role),
     ["user", "model", "user"]
@@ -115,10 +122,10 @@ async function withServer(generate, run, opts = {}) {
   const srv = createApp({ generate, retryDelayMs: 1, ...opts }).listen(0);
   const url = `http://127.0.0.1:${srv.address().port}`;
   try {
-    await run((body) =>
+    await run((body, headers = {}) =>
       fetch(`${url}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify(body),
       })
     );
@@ -140,7 +147,9 @@ test("503 sementara: dicoba ulang lalu berhasil", async () => {
   await withServer(generate, async (send) => {
     const res = await send({ message: "halo" });
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), { reply: "akhirnya berhasil" });
+    const json = await res.json();
+    assert.equal(json.reply, "akhirnya berhasil");
+    assert.equal(json.role, "guest");
     assert.equal(calls, 3); // 1 percobaan + 2 retry
   });
 });
@@ -320,10 +329,15 @@ test("POST /chat menggunakan searchWeb mock saat menanyakan sekolah di luar DB",
 
   try {
     await withServer(mockGenerate, async (send) => {
-      const res = await send({ message: "Apakah SMKN 2 Malang punya jurusan Tata Boga?" });
+      // Kirim dengan token guru yang memiliki izin akses Jurusan dan Web Search
+      const res = await send(
+        { message: "Apakah SMKN 2 Malang punya jurusan Tata Boga?" },
+        { "x-api-token": "token-guru-456" }
+      );
       assert.equal(res.status, 200);
       const json = await res.json();
       assert.equal(json.reply, "Ya, SMKN 2 Malang memiliki jurusan Tata Boga.");
+      assert.equal(json.role, "guru");
       assert.equal(searchCalledWith, "Apakah SMKN 2 Malang punya jurusan Tata Boga?");
       assert.ok(receivedPrompt.includes("=== SUMBER 3: PENCARIAN WEB TERBARU (TAVILY) ==="));
       assert.ok(receivedPrompt.includes("SMKN 2 Malang memiliki program Tata Boga."));
@@ -346,14 +360,141 @@ test("POST /chat tetap sukses jika searchWeb mengalami kegagalan", async () => {
 
   try {
     await withServer(mockGenerate, async (send) => {
-      const res = await send({ message: "Info SMKN 2 Malang" });
+      const res = await send({ message: "Berapa nomor telepon dan alamat SMKN 4 Malang?" });
       assert.equal(res.status, 200);
       const json = await res.json();
       assert.equal(json.reply, "Jawaban fallback tanpa web search");
+      assert.equal(json.role, "guest");
     }, { searchWeb: failingSearch });
   } finally {
     if (origKey) process.env.TAVILY_API_KEY = origKey;
     else delete process.env.TAVILY_API_KEY;
   }
+});
+
+// ---------- Pengujian RBAC (Role-Based Access Control) ----------
+test("detectQuestionCategory: mendeteksi kategori pertanyaan secara akurat", () => {
+  assert.equal(detectQuestionCategory("Bagaimana akreditasi dan kurikulum SMK Telkom?"), "Profil");
+  assert.equal(detectQuestionCategory("Berapa nomor telepon dan alamat sekolah?"), "Alamat & Kontak");
+  assert.equal(detectQuestionCategory("Kapan jadwal pendaftaran PPDB dan biaya SPP?"), "Pendaftaran");
+  assert.equal(detectQuestionCategory("Apa saja jurusan di SMKN 4 Malang?"), "Jurusan");
+  assert.equal(detectQuestionCategory("Apa saja fasilitas dan lab komputer?"), "Fasilitas");
+  assert.equal(detectQuestionCategory("Apa saja ekstrakurikuler basket dan pramuka?"), "Kegiatan");
+  assert.equal(detectQuestionCategory("Halo, apa kabar?"), null);
+});
+
+test("isCategoryAllowed: memeriksa izin kategori berdasarkan role/user", () => {
+  // Admin: wildcard '*'
+  assert.equal(isCategoryAllowed("Profil", ["*"]), true);
+  assert.equal(isCategoryAllowed("Jurusan", ["*"]), true);
+
+  // Siswa: Alamat, Pendaftaran, Jurusan, Fasilitas (Profil & Kegiatan TIDAK diizinkan)
+  const siswaCats = ["Alamat & Kontak", "Pendaftaran", "Jurusan", "Fasilitas"];
+  assert.equal(isCategoryAllowed("Jurusan", siswaCats), true);
+  assert.equal(isCategoryAllowed("Alamat & Kontak", siswaCats), true);
+  assert.equal(isCategoryAllowed("Profil", siswaCats), false);
+  assert.equal(isCategoryAllowed("Kegiatan", siswaCats), false);
+
+  // Guest: hanya Alamat & Kontak, Pendaftaran
+  const guestCats = ["Alamat & Kontak", "Pendaftaran"];
+  assert.equal(isCategoryAllowed("Pendaftaran", guestCats), true);
+  assert.equal(isCategoryAllowed("Jurusan", guestCats), false);
+});
+
+test("GET /users mengembalikan daftar akun demo", async () => {
+  const res = await fetch(`${base}/users`);
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.ok(Array.isArray(data.users));
+  assert.ok(data.users.length > 0);
+  assert.ok(data.users.some((u) => u.username === "budi_siswa"));
+});
+
+test("POST /login: validasi dan login sukses", async () => {
+  // 1. Username kosong -> 400
+  const resEmpty = await fetch(`${base}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(resEmpty.status, 400);
+
+  // 2. Username salah -> 401
+  const resInvalid = await fetch(`${base}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "user_ngawur_123" }),
+  });
+  assert.equal(resInvalid.status, 401);
+
+  // 3. Username valid -> 200
+  const resOk = await fetch(`${base}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "pak_andi_guru" }),
+  });
+  assert.equal(resOk.status, 200);
+  const data = await resOk.json();
+  assert.equal(data.token, "token-guru-456");
+  assert.equal(data.user.role, "guru");
+  assert.ok(data.user.allowedCategories.includes("Profil"));
+});
+
+test("GET /me: profil guest vs profil user login", async () => {
+  // 1. Tanpa token -> guest
+  const resGuest = await fetch(`${base}/me`);
+  assert.equal(resGuest.status, 200);
+  const dataGuest = await resGuest.json();
+  assert.equal(dataGuest.role, "guest");
+  assert.equal(dataGuest.dailyLimit, 10);
+
+  // 2. Token invalid -> 401
+  const resInvalid = await fetch(`${base}/me`, {
+    headers: { "x-api-token": "token-palsu" },
+  });
+  assert.equal(resInvalid.status, 401);
+
+  // 3. Token valid -> 200
+  const resUser = await fetch(`${base}/me`, {
+    headers: { "x-api-token": "token-siswa-123" },
+  });
+  assert.equal(resUser.status, 200);
+  const dataUser = await resUser.json();
+  assert.equal(dataUser.username, "budi_siswa");
+  assert.equal(dataUser.role, "siswa");
+  assert.equal(dataUser.dailyLimit, 50);
+});
+
+test("POST /chat: penolakan topik jika role tidak berizin (Response 200 dengan sources kosong)", async () => {
+  // Siswa menanyakan topik 'Profil' (akreditasi/kurikulum)
+  const res = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-token": "token-siswa-123",
+    },
+    body: JSON.stringify({
+      message: "Bagaimana akreditasi dan kurikulum SMK Telkom Malang?",
+    }),
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.ok(data.reply.includes("tidak memiliki izin untuk membaca informasi pada topik \"Profil\""));
+  assert.equal(data.role, "siswa");
+  assert.deepEqual(data.sources, []);
+});
+
+test("POST /chat: penolakan token tidak valid (401)", async () => {
+  const res = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-token": "token-tidak-terdaftar",
+    },
+    body: JSON.stringify({ message: "Halo" }),
+  });
+  assert.equal(res.status, 401);
+  assert.ok((await res.json()).error.includes("Token tidak valid"));
 });
 
