@@ -297,6 +297,167 @@ export async function searchWebFallback(query, client = getTavilyClient()) {
 }
 
 /**
+ * Menyimpan data hasil pencarian web Tavily ke tabel `knowledge_pending` di MySQL secara asinkron.
+ * Status awal adalah 'pending' sehingga admin dapat me-review atau mengubahnya jadi 'approved' di Railway.
+ */
+export async function saveTavilyToPending(message, tavilyRes, schoolId = null) {
+  if (!tavilyRes) return null;
+  const pool = getDbPool();
+  if (!pool) return null;
+
+  try {
+    const normalizedKey = message.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().slice(0, 190);
+    const answer = tavilyRes.answer || (tavilyRes.results?.[0]?.content ?? "");
+    if (!answer || answer.trim() === "") return null;
+
+    const sources = JSON.stringify(
+      (tavilyRes.results || []).map((r) => ({ title: r.title, url: r.url }))
+    );
+
+    // Deteksi school_id jika belum diberikan
+    let targetSchoolId = schoolId;
+    if (!targetSchoolId) {
+      const [schools] = await pool.query("SELECT id, name, aliases FROM schools");
+      if (Array.isArray(schools)) {
+        for (const s of schools) {
+          const names = [s.name, ...(s.aliases || "").split(",")].map((n) => n.trim().toLowerCase()).filter(Boolean);
+          if (names.some((n) => message.toLowerCase().includes(n))) {
+            targetSchoolId = s.id;
+            break;
+          }
+        }
+      }
+    }
+
+    const query = `
+      INSERT INTO knowledge_pending (school_id, question, question_key, answer, sources, status)
+      VALUES (?, ?, ?, ?, ?, 'pending')
+      ON DUPLICATE KEY UPDATE
+        answer = VALUES(answer),
+        sources = VALUES(sources),
+        updated_at = CURRENT_TIMESTAMP
+    `;
+
+    // Catatan: Jika updated_at tidak ada di skema, update created_at atau status jika pending
+    await pool.query(`
+      INSERT INTO knowledge_pending (school_id, question, question_key, answer, sources, status)
+      VALUES (?, ?, ?, ?, ?, 'pending')
+      ON DUPLICATE KEY UPDATE
+        answer = VALUES(answer),
+        sources = VALUES(sources)
+    `, [targetSchoolId || null, message, normalizedKey, answer, sources]);
+
+    console.log(`[KnowledgePending] Data baru berhasil dicatat ke antrean pending: "${message.slice(0, 50)}..."`);
+    return true;
+  } catch (err) {
+    console.warn("[KnowledgePending] Gagal menyimpan ke antrean pending:", err?.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * Memproses dan mendistribusikan data dari `knowledge_pending` yang telah di-ACC (status 'approved')
+ * langsung ke tabel relasional resmi (school_majors, school_profiles, school_address_contacts, dll).
+ */
+export async function syncApprovedPendingKnowledge() {
+  const pool = getDbPool();
+  if (!pool) return { migrated: 0 };
+
+  try {
+    const [approvedRows] = await pool.query(`
+      SELECT kp.id, kp.school_id, kp.question, kp.question_key, kp.answer, kp.sources, s.name AS school_name
+      FROM knowledge_pending kp
+      LEFT JOIN schools s ON kp.school_id = s.id
+      WHERE kp.status = 'approved'
+    `);
+
+    if (!Array.isArray(approvedRows) || approvedRows.length === 0) {
+      return { migrated: 0 };
+    }
+
+    let migratedCount = 0;
+
+    for (const row of approvedRows) {
+      let targetSchoolId = row.school_id;
+
+      // 1. Jika sekolah belum ada di tabel `schools`, deteksi nama sekolah dan buat entri baru
+      if (!targetSchoolId) {
+        let extractedSchoolName = null;
+        const text = `${row.question} ${row.answer}`;
+        const match = text.match(/\b(SMKN?\s*\d+|SMK\s+[A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?)\b/i);
+        if (match) {
+          extractedSchoolName = match[0].toUpperCase();
+          if (extractedSchoolName.startsWith("SMKN")) {
+            extractedSchoolName = extractedSchoolName.replace("SMKN", "SMK Negeri");
+          }
+        } else {
+          extractedSchoolName = "SMK di Malang (Umum)";
+        }
+
+        // Cek atau buat di tabel schools
+        const [existing] = await pool.query("SELECT id FROM schools WHERE name = ? LIMIT 1", [extractedSchoolName]);
+        if (existing && existing.length > 0) {
+          targetSchoolId = existing[0].id;
+        } else {
+          const [insertRes] = await pool.query(
+            "INSERT INTO schools (name, aliases) VALUES (?, ?)",
+            [extractedSchoolName, extractedSchoolName.toLowerCase()]
+          );
+          targetSchoolId = insertRes.insertId;
+        }
+      }
+
+      // 2. Tentukan tabel tujuan berdasarkan konteks pertanyaan
+      const q = row.question.toLowerCase();
+      let targetTable = "school_profiles";
+      let title = "Informasi Tambahan";
+
+      if (/\b(jurusan|prodi|keahlian|program studi|rpl|tkj|dkv|animasi|kuliner|tata boga)\b/i.test(q)) {
+        targetTable = "school_majors";
+        title = `Jurusan dan Kompetensi Keahlian (${row.question.slice(0, 40)})`;
+      } else if (/\b(kontak|telepon|wa|whatsapp|alamat|lokasi|email|website|maps)\b/i.test(q)) {
+        targetTable = "school_address_contacts";
+        title = `Kontak dan Lokasi (${row.question.slice(0, 40)})`;
+      } else if (/\b(ppdb|daftar|pendaftaran|biaya|spp|syarat|jalur)\b/i.test(q)) {
+        targetTable = "school_ppdb";
+        title = `Informasi PPDB dan Pendaftaran (${row.question.slice(0, 40)})`;
+      } else if (/\b(fasilitas|lab|gedung|bengkel|lapangan)\b/i.test(q)) {
+        targetTable = "school_facilities";
+        title = `Fasilitas Sekolah (${row.question.slice(0, 40)})`;
+      } else if (/\b(ekskul|ekstrakurikuler|kegiatan|organisasi|osis)\b/i.test(q)) {
+        targetTable = "school_activities";
+        title = `Kegiatan dan Ekstrakurikuler (${row.question.slice(0, 40)})`;
+      } else {
+        targetTable = "school_profiles";
+        title = `Profil Sekolah (${row.question.slice(0, 40)})`;
+      }
+
+      const keywords = `${row.question_key} ${row.question.toLowerCase()}`.slice(0, 250);
+
+      // 3. Masukkan ke tabel relasional resmi
+      await pool.query(`
+        INSERT INTO \`${targetTable}\` (school_id, title, content, keywords)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          content = VALUES(content),
+          keywords = VALUES(keywords)
+      `, [targetSchoolId, title, row.answer, keywords]);
+
+      // 4. Update status dari 'approved' menjadi 'migrated' atau hapus dari antrean agar tidak diproses berulang
+      // Karena enum status adalah ('pending', 'approved', 'rejected'), kita hapus baris yang selesai dimigrasi
+      await pool.query("DELETE FROM knowledge_pending WHERE id = ?", [row.id]);
+      migratedCount += 1;
+    }
+
+    console.log(`[KnowledgePending] ${migratedCount} data yang di-ACC berhasil didistribusikan ke tabel relasional resmi.`);
+    return { migrated: migratedCount };
+  } catch (err) {
+    console.warn("[KnowledgePending] Gagal menyinkronkan data approved:", err?.message ?? err);
+    return { migrated: 0, error: err?.message };
+  }
+}
+
+/**
  * Menyusun system prompt yang membatasi jawaban Gemini berdasarkan database pengetahuan, dokumen panduan, dan pencarian web (Tavily).
  */
 export function buildSystemPrompt(items = loadKnowledgeBase(), guideDoc = loadGuideDocument(), webResults = null) {
@@ -488,15 +649,29 @@ export function createApp({
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-  // POST /sync - Memperbarui cache dari MySQL online tanpa restart
+  // POST /sync - Memperbarui cache dari MySQL online tanpa restart & memproses antrean ACC (approved)
   app.post("/sync", async (_req, res) => {
+    // 1. Proses data approved dari knowledge_pending ke tabel resmi jika ada
+    const syncResult = await syncApprovedPendingKnowledge();
+
+    // 2. Refresh cache knowledge items dari database relasional
     const dbItems = await fetchKnowledgeFromDb();
     if (dbItems && dbItems.length > 0) {
       cachedKnowledgeItems = dbItems;
-      return res.json({ status: "ok", count: dbItems.length, source: "mysql" });
+      return res.json({
+        status: "ok",
+        count: dbItems.length,
+        source: "mysql",
+        migrated_pending: syncResult.migrated,
+      });
     }
     const localItems = loadKnowledgeBase();
-    return res.json({ status: "fallback", count: localItems.length, source: "local" });
+    return res.json({
+      status: "fallback",
+      count: localItems.length,
+      source: "local",
+      migrated_pending: syncResult.migrated,
+    });
   });
 
   const chatLimiter = rateLimit({
@@ -524,6 +699,11 @@ export function createApp({
           const tavilyRes = await searchWeb(parsed.message);
           if (tavilyRes) {
             webResultsText = formatTavilyResults(tavilyRes);
+
+            // Simpan otomatis ke antrean pending (background non-blocking)
+            saveTavilyToPending(parsed.message, tavilyRes).catch((err) =>
+              console.warn("[saveTavilyToPending error]", err?.message ?? err)
+            );
           }
         } catch (searchErr) {
           console.warn("[Tavily search skipped]", searchErr?.message ?? searchErr);
@@ -589,5 +769,21 @@ if (isMain) {
     } else {
       console.log(`Database pengetahuan fallback (data.md): ${loadKnowledgeBase().length} entri dimuat.`);
     }
+
+    // Jalankan sinkronisasi background berkala untuk memproses data yang di-ACC di Railway Data Viewer
+    setInterval(async () => {
+      try {
+        const syncRes = await syncApprovedPendingKnowledge();
+        if (syncRes.migrated > 0) {
+          const refreshed = await fetchKnowledgeFromDb();
+          if (refreshed && refreshed.length > 0) {
+            cachedKnowledgeItems = refreshed;
+            console.log(`[AutoSync] Berhasil memigrasikan ${syncRes.migrated} entri yang di-ACC ke tabel resmi.`);
+          }
+        }
+      } catch (e) {
+        // Abaikan error periodic sync
+      }
+    }, 60000); // Cek setiap 60 detik
   });
 }
