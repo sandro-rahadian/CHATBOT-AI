@@ -229,7 +229,7 @@ export function PlaceholdersAndVanishInput({
         ref={btnRef}
         disabled={!value || animating}
         type="submit"
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[100px] h-9 px-3.5 sm:px-4 rounded-full bg-[#FFFFFF] hover:bg-[#F0F0F0] active:bg-[#E0E0E0] text-[#0A0A0B] font-semibold border-none shadow-sm disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200 cursor-pointer"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[90px] h-9 px-3.5 sm:px-4 rounded-full bg-[#2E2E2F] hover:bg-[#3F3F3F] active:bg-[#1E1F1F] text-[#FFFFFF] font-semibold border border-[#3F3F3F] shadow-sm disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200 cursor-pointer"
       >
         <span className="text-xs font-semibold tracking-tight">Kirim</span>
       </Button>
