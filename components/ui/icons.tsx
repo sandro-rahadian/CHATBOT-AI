@@ -29,6 +29,29 @@ export function Message({
   );
 }
 
+export function Plus({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <line x1="8" y1="3.25" x2="8" y2="12.75" />
+      <line x1="3.25" y1="8" x2="12.75" y2="8" />
+    </svg>
+  );
+}
+
 export function Trash({
   size = 24,
   ...props

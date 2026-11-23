@@ -30,6 +30,7 @@ import {
 import {
   SidebarDockMenu,
   type UserProfile,
+  type ConversationItem,
 } from "@/components/sidebar-dock-menu";
 
 // ─── Local UI Elements ────────────────────────────────────────────────────────
@@ -196,6 +197,10 @@ export default function ChatPage() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
+  // Chat History / Multi-Session State
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
     "https://chatbot-ai-production-b22e59af.up.railway.app";
@@ -218,6 +223,9 @@ export default function ChatPage() {
           localStorage.removeItem("chat_token");
           setApiToken(null);
           setCurrentUser(null);
+          setConversations([]);
+          setMessages([]);
+          setActiveConversationId(null);
         }
       } catch (e) {
         console.error("Gagal mengambil profil user:", e);
@@ -226,22 +234,129 @@ export default function ChatPage() {
     [apiBase]
   );
 
-  // Initial load: Read stored token
+  // Fetch list of conversations for this user
+  const fetchConversations = useCallback(
+    async (token: string | null) => {
+      if (!token) {
+        setConversations([]);
+        return;
+      }
+      try {
+        const res = await fetch(`${apiBase}/conversations`, {
+          headers: { "x-api-token": token },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setConversations(data.conversations || []);
+        }
+      } catch (e) {
+        console.warn("Gagal mengambil riwayat percakapan:", e);
+      }
+    },
+    [apiBase]
+  );
+
+  // Load a specific conversation's messages
+  const loadConversation = useCallback(
+    async (convId: string, token: string | null) => {
+      if (!token) return;
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await fetch(`${apiBase}/conversations/${convId}`, {
+          headers: { "x-api-token": token },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const rawMsgs = data.conversation?.messages || [];
+          setMessages(
+            rawMsgs.map(
+              (m: {
+                id: string;
+                role: "user" | "assistant";
+                content: string;
+                created_at: string;
+                sources?: SourceItem[];
+              }) => ({
+                id: m.id || crypto.randomUUID(),
+                role: m.role,
+                content: m.content,
+                timestamp: new Date(m.created_at || Date.now()),
+                sources: m.sources || [],
+              })
+            )
+          );
+          setActiveConversationId(convId);
+        }
+      } catch (e) {
+        console.error("Gagal memuat pesan percakapan:", e);
+        toast.error("Gagal Membuka Obrolan");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [apiBase]
+  );
+
+  // New Chat handler
+  const handleNewChat = useCallback(() => {
+    setActiveConversationId(null);
+    setMessages([]);
+    setError(null);
+  }, []);
+
+  // Delete conversation thread handler
+  const handleDeleteConversation = useCallback(
+    async (convId: string) => {
+      if (!apiToken) return;
+      try {
+        const res = await fetch(`${apiBase}/conversations/${convId}`, {
+          method: "DELETE",
+          headers: { "x-api-token": apiToken },
+        });
+        if (res.ok) {
+          setConversations((prev) => prev.filter((c) => c.id !== convId));
+          if (activeConversationId === convId) {
+            setActiveConversationId(null);
+            setMessages([]);
+          }
+          toast.info("Riwayat Dihapus", {
+            description: "Obrolan berhasil dihapus.",
+          });
+        }
+      } catch (e) {
+        console.error("Gagal menghapus percakapan:", e);
+        toast.error("Gagal Menghapus Obrolan");
+      }
+    },
+    [apiBase, apiToken, activeConversationId]
+  );
+
+  // Initial load: Read stored token & enforce user isolation
   useEffect(() => {
     const savedToken = localStorage.getItem("chat_token");
     if (savedToken) {
       setApiToken(savedToken);
       fetchProfile(savedToken);
+      fetchConversations(savedToken);
     } else {
+      setApiToken(null);
+      setCurrentUser(null);
+      setConversations([]);
+      setMessages([]);
+      setActiveConversationId(null);
       fetchProfile(null);
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, fetchConversations]);
 
-  // Logout handler
+  // Logout handler - clears all messages & resets active conversation
   const handleLogout = () => {
     localStorage.removeItem("chat_token");
     setApiToken(null);
     setCurrentUser(null);
+    setConversations([]);
+    setMessages([]);
+    setActiveConversationId(null);
     toast.info("Berhasil Keluar", {
       description: "Sesi Anda telah berakhir. Anda kini dalam mode Tamu.",
     });
@@ -289,6 +404,7 @@ export default function ChatPage() {
         headers,
         body: JSON.stringify({
           message: newUserMsg.content,
+          conversation_id: activeConversationId || undefined,
           history: messages.map((m) => ({
             role: m.role,
             content: m.content,
@@ -315,6 +431,7 @@ export default function ChatPage() {
         reply: string;
         role?: string;
         sources?: SourceItem[];
+        conversation_id?: string;
       } = await response.json();
 
       const aiMsg: Message = {
@@ -327,6 +444,12 @@ export default function ChatPage() {
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+
+      // Jika percakapan baru dibuat di backend, update activeConversationId dan refresh list
+      if (data.conversation_id) {
+        setActiveConversationId(data.conversation_id);
+        fetchConversations(apiToken);
+      }
 
       // Decrement local quota and sync silently
       if (currentUser && currentUser.role !== "admin") {
@@ -392,6 +515,11 @@ export default function ChatPage() {
       {/* ── Framer Sidebar Dock Menu ── */}
       <SidebarDockMenu
         currentUser={currentUser}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        onSelectConversation={(id) => loadConversation(id, apiToken)}
+        onNewChat={handleNewChat}
+        onDeleteConversation={handleDeleteConversation}
         onLogout={handleLogout}
         onClear={() => setShowConfirm(true)}
       />

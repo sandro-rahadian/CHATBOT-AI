@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Message,
+  Plus,
   Trash,
   LogIn,
   LogOut,
@@ -33,17 +34,21 @@ export interface UserProfile {
   remainingQuota: number | null;
 }
 
-export interface DemoUser {
-  id: number;
-  username: string;
-  role: "siswa" | "guru" | "admin";
-  school_id: number | null;
-  allowed_categories: string | null;
-  daily_limit: number | null;
+export interface ConversationItem {
+  id: string;
+  user_id?: number | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface SidebarDockMenuProps {
   currentUser: UserProfile | null;
+  conversations?: ConversationItem[];
+  activeConversationId?: string | null;
+  onSelectConversation?: (id: string) => void;
+  onNewChat?: () => void;
+  onDeleteConversation?: (id: string) => void;
   onLogout: () => void;
   onClear: () => void;
 }
@@ -80,6 +85,11 @@ function getRoleBadgeStyle(role: string) {
 
 export function SidebarDockMenu({
   currentUser,
+  conversations = [],
+  activeConversationId = null,
+  onSelectConversation,
+  onNewChat,
+  onDeleteConversation,
   onLogout,
   onClear,
 }: SidebarDockMenuProps) {
@@ -106,7 +116,7 @@ export function SidebarDockMenu({
         layout
         initial={false}
         animate={{
-          width: isOpen ? 256 : 64,
+          width: isOpen ? 272 : 64,
         }}
         transition={{
           type: "spring",
@@ -119,8 +129,8 @@ export function SidebarDockMenu({
         }}
       >
         {/* ── Top Section: Logo & Toggle ────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between min-h-[38px] w-full">
+        <div className="flex flex-col gap-2.5 min-h-0 flex-1">
+          <div className="flex items-center justify-between min-h-[38px] w-full shrink-0">
             <Link
               href="/"
               className="flex items-center gap-2.5 overflow-hidden group select-none"
@@ -173,10 +183,10 @@ export function SidebarDockMenu({
             )}
           </div>
 
-          <div className="h-px bg-[#2E2E2F] w-full my-0.5" />
+          <div className="h-px bg-[#2E2E2F] w-full my-0.5 shrink-0" />
 
           {/* ── User Profile & Quota Section ─────────────────────────────────── */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 shrink-0">
             {!isOpen ? (
               /* Compact Icon Mode (No Background Box) */
               <div className="flex flex-col items-center gap-2">
@@ -225,12 +235,12 @@ export function SidebarDockMenu({
               </div>
             ) : (
               /* Expanded Mode */
-              <div className="bg-transparent border border-[#2E2E2F] rounded-[8px] p-3 flex flex-col gap-2.5 shadow-sm">
+              <div className="bg-transparent border border-[#2E2E2F] rounded-[8px] p-2.5 flex flex-col gap-2 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <Avatar className={`w-8 h-8 shrink-0 ${badge.ring}`}>
-                      <AvatarFallback className="bg-[#141515] text-xs text-[#FFFFFF] font-semibold">
-                        <UserIcon size={16} />
+                    <Avatar className={`w-7 h-7 shrink-0 ${badge.ring}`}>
+                      <AvatarFallback className="bg-[#141515] text-[11px] text-[#FFFFFF] font-semibold">
+                        <UserIcon size={14} />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col min-w-0">
@@ -250,7 +260,7 @@ export function SidebarDockMenu({
                   </div>
                   <Badge
                     variant="outline"
-                    className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-[4px] border shrink-0 ${badge.bg}`}
+                    className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-[4px] border shrink-0 ${badge.bg}`}
                   >
                     {badge.label}
                   </Badge>
@@ -258,12 +268,12 @@ export function SidebarDockMenu({
 
                 {isLoggedIn ? (
                   /* Logged-in Quota Bar */
-                  <div className="flex items-center justify-between bg-transparent px-2.5 py-1.5 rounded-[6px] border border-[#2E2E2F] text-[11px]">
-                    <span className="text-[#B3B2B2] flex items-center gap-1.5">
-                      <Zap size={14} className="text-[#FFFFFF]" />
+                  <div className="flex items-center justify-between bg-transparent px-2 py-1 rounded-[6px] border border-[#2E2E2F] text-[11px]">
+                    <span className="text-[#B3B2B2] flex items-center gap-1.5 text-[10px]">
+                      <Zap size={12} className="text-[#FFFFFF]" />
                       Sisa Kuota:
                     </span>
-                    <span className="font-mono font-semibold text-[#FFFFFF]">
+                    <span className="font-mono text-[11px] font-semibold text-[#FFFFFF]">
                       {role === "admin"
                         ? "Tanpa Batas (∞)"
                         : `${currentUser?.remainingQuota ?? 0}/${
@@ -273,7 +283,7 @@ export function SidebarDockMenu({
                   </div>
                 ) : (
                   /* Guest Notice Banner */
-                  <div className="bg-transparent border border-[#2E2E2F] rounded-[6px] p-2 text-center flex flex-col gap-1">
+                  <div className="bg-transparent border border-[#2E2E2F] rounded-[6px] p-2 text-center flex flex-col gap-0.5">
                     <span className="text-[10px] text-[#FFFFFF] font-medium">
                       🔒 Anda belum login
                     </span>
@@ -286,31 +296,107 @@ export function SidebarDockMenu({
             )}
           </div>
 
-          <div className="h-px bg-[#2E2E2F] w-full my-0.5" />
-
-          {/* ── Navigation Menu Items (No Background Boxes) ─────────────────── */}
-          <nav className="flex flex-col gap-1.5">
-            {/* 1. Obrolan Utama */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/"
-                  className={`group flex items-center gap-3 p-2 rounded-[6px] bg-transparent text-[#FFFFFF] border border-transparent hover:bg-white/5 transition-all select-none ${
-                    !isOpen ? "justify-center" : ""
-                  }`}
+          {/* ── Action: Obrolan Baru (New Chat Button like Gemini) ─────────── */}
+          {isLoggedIn && (
+            <div className="shrink-0 mt-1">
+              {!isOpen ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => onNewChat?.()}
+                      className="w-10 h-10 mx-auto rounded-[8px] bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] flex items-center justify-center shadow-xs cursor-pointer transition-transform hover:scale-105"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Obrolan Baru (+)</TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onNewChat?.()}
+                  className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-[8px] bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] text-xs font-semibold shadow-xs cursor-pointer transition-all group"
                 >
-                  <Message size={18} className="text-[#FFFFFF] shrink-0" />
-                  {isOpen && (
-                    <span className="text-xs font-medium truncate flex-1">
-                      Obrolan Chat
-                    </span>
-                  )}
-                </Link>
-              </TooltipTrigger>
-              {!isOpen && <TooltipContent side="right">Obrolan Chat</TooltipContent>}
-            </Tooltip>
+                  <Plus size={15} className="group-hover:scale-110 transition-transform" />
+                  <span>Obrolan Baru</span>
+                </button>
+              )}
+            </div>
+          )}
 
-            {/* 2. Hapus Percakapan */}
+          <div className="h-px bg-[#2E2E2F] w-full my-0.5 shrink-0" />
+
+          {/* ── Chat History Thread List (Multi-Session like Gemini) ─────────── */}
+          {isLoggedIn && isOpen && (
+            <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+              <div className="flex items-center justify-between px-1 text-[10px] font-semibold text-[#8C8C8C] uppercase tracking-wider shrink-0">
+                <span>Riwayat Obrolan</span>
+                {conversations.length > 0 && (
+                  <span className="font-mono text-[#5F5C5D] font-normal">
+                    {conversations.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1 overflow-y-auto pr-1 flex-1 min-h-0">
+                {conversations.length === 0 ? (
+                  <div className="p-3 text-center border border-dashed border-[#2E2E2F] rounded-[6px] my-auto">
+                    <p className="text-[11px] text-[#5F5C5D]">
+                      Belum ada obrolan.
+                    </p>
+                    <p className="text-[10px] text-[#3F3F3F] mt-0.5">
+                      Mulai pertanyaan baru!
+                    </p>
+                  </div>
+                ) : (
+                  conversations.map((conv) => {
+                    const isActive = conv.id === activeConversationId;
+                    return (
+                      <div
+                        key={conv.id}
+                        onClick={() => onSelectConversation?.(conv.id)}
+                        className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-[6px] text-xs transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-[#1E1F1F] text-[#FFFFFF] border border-[#3F3F3F]"
+                            : "text-[#B3B2B2] hover:text-[#FFFFFF] hover:bg-white/5 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Message
+                            size={14}
+                            className={`shrink-0 ${
+                              isActive
+                                ? "text-[#FFFFFF]"
+                                : "text-[#5F5C5D] group-hover:text-[#B3B2B2]"
+                            }`}
+                          />
+                          <span className="truncate font-medium">
+                            {conv.title || "Obrolan"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteConversation?.(conv.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#FFFFFF] text-[#5F5C5D] rounded transition-opacity cursor-pointer shrink-0 ml-1.5"
+                          title="Hapus riwayat obrolan ini"
+                        >
+                          <Trash size={12} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Navigation Menu Items (Compact or Clear Action) ──────────────── */}
+          <nav className="flex flex-col gap-1.5 shrink-0 mt-auto">
+            {/* Bersihkan Percakapan Aktif */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -320,23 +406,26 @@ export function SidebarDockMenu({
                     !isOpen ? "justify-center" : ""
                   }`}
                 >
-                  <Trash size={18} className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors" />
+                  <Trash
+                    size={17}
+                    className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors"
+                  />
                   {isOpen && (
                     <span className="text-xs font-medium truncate">
-                      Hapus Percakapan
+                      Bersihkan Layar
                     </span>
                   )}
                 </button>
               </TooltipTrigger>
               {!isOpen && (
-                <TooltipContent side="right">Hapus Percakapan</TooltipContent>
+                <TooltipContent side="right">Bersihkan Layar</TooltipContent>
               )}
             </Tooltip>
           </nav>
         </div>
 
         {/* ── Bottom Section: Auth Links / Logout (No Background Boxes) ─────── */}
-        <div className="flex flex-col gap-1.5 pt-3 border-t border-[#2E2E2F] mt-3">
+        <div className="flex flex-col gap-1.5 pt-2.5 border-t border-[#2E2E2F] mt-2 shrink-0">
           {isLoggedIn ? (
             /* Logged In: Logout Button */
             <Tooltip>
@@ -348,11 +437,16 @@ export function SidebarDockMenu({
                     !isOpen ? "justify-center" : ""
                   }`}
                 >
-                  <LogOut size={18} className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors" />
+                  <LogOut
+                    size={17}
+                    className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors"
+                  />
                   {isOpen && <span className="truncate">Keluar (Logout)</span>}
                 </button>
               </TooltipTrigger>
-              {!isOpen && <TooltipContent side="right">Keluar (Logout)</TooltipContent>}
+              {!isOpen && (
+                <TooltipContent side="right">Keluar (Logout)</TooltipContent>
+              )}
             </Tooltip>
           ) : (
             /* Guest: Login & Signup Buttons */
@@ -367,11 +461,17 @@ export function SidebarDockMenu({
                         : "bg-transparent border border-[#2E2E2F] hover:bg-white/5 text-[#FFFFFF]"
                     }`}
                   >
-                    <LogIn size={18} className="text-[#FFFFFF] shrink-0" />
-                    {isOpen && <span className="truncate font-semibold">Masuk (Login)</span>}
+                    <LogIn size={17} className="text-[#FFFFFF] shrink-0" />
+                    {isOpen && (
+                      <span className="truncate font-semibold">
+                        Masuk (Login)
+                      </span>
+                    )}
                   </Link>
                 </TooltipTrigger>
-                {!isOpen && <TooltipContent side="right">Masuk (Login)</TooltipContent>}
+                {!isOpen && (
+                  <TooltipContent side="right">Masuk (Login)</TooltipContent>
+                )}
               </Tooltip>
 
               <Tooltip>
@@ -384,11 +484,16 @@ export function SidebarDockMenu({
                         : "bg-transparent border border-[#2E2E2F] hover:bg-white/5 text-[#FFFFFF]"
                     }`}
                   >
-                    <UserPlus size={18} className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0" />
+                    <UserPlus
+                      size={17}
+                      className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0"
+                    />
                     {isOpen && <span className="truncate">Daftar Akun</span>}
                   </Link>
                 </TooltipTrigger>
-                {!isOpen && <TooltipContent side="right">Daftar Akun</TooltipContent>}
+                {!isOpen && (
+                  <TooltipContent side="right">Daftar Akun</TooltipContent>
+                )}
               </Tooltip>
             </>
           )}
@@ -402,7 +507,7 @@ export function SidebarDockMenu({
                   onClick={() => setIsOpen(true)}
                   className="w-10 h-7 mx-auto rounded-[6px] hover:bg-white/5 border border-transparent flex items-center justify-center text-[#B3B2B2] hover:text-[#FFFFFF] transition-colors cursor-pointer mt-1"
                 >
-                  <ChevronRight size={18} />
+                  <ChevronRight size={17} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">Buka Sidebar</TooltipContent>
