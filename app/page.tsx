@@ -1,20 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  User,
-  ShieldCheck,
-  Zap,
-  ChevronDown,
-  LogOut,
-  Check,
-  BookOpen,
-  LogIn,
-  UserPlus,
-} from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 // ─── Shadcn UI Components ─────────────────────────────────────────────────────
@@ -28,16 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// ─── Framer Sidebar Dock Menu ─────────────────────────────────────────────────
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+  SidebarDockMenu,
+  type UserProfile,
+  type DemoUser,
+} from "@/components/sidebar-dock-menu";
 
 // ─── Local UI Elements ────────────────────────────────────────────────────────
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
@@ -59,376 +44,6 @@ interface Message {
   timestamp: Date;
   sources?: SourceItem[];
   userRole?: string;
-}
-
-interface UserProfile {
-  username: string;
-  role: "guest" | "siswa" | "guru" | "admin";
-  schoolId: number | null;
-  allowedCategories: string[];
-  dailyLimit: number | null;
-  remainingQuota: number | null;
-}
-
-interface DemoUser {
-  id: number;
-  username: string;
-  role: "siswa" | "guru" | "admin";
-  school_id: number | null;
-  allowed_categories: string | null;
-  daily_limit: number | null;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getRoleBadgeStyle(role: string) {
-  switch (role) {
-    case "admin":
-      return {
-        bg: "bg-purple-500/15 text-purple-300 border-purple-500/40",
-        label: "Admin",
-      };
-    case "guru":
-      return {
-        bg: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
-        label: "Guru",
-      };
-    case "siswa":
-      return {
-        bg: "bg-sky-500/15 text-sky-300 border-sky-500/40",
-        label: "Siswa",
-      };
-    case "guest":
-    default:
-      return {
-        bg: "bg-zinc-700/50 text-zinc-300 border-zinc-600",
-        label: "Guest",
-      };
-  }
-}
-
-// ─── DynamicIslandNav ─────────────────────────────────────────────────────────
-
-function DynamicIslandNav({ onClear }: { onClear: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50">
-      <motion.div
-        layout
-        onHoverStart={() => setExpanded(true)}
-        onHoverEnd={() => setExpanded(false)}
-        onClick={() => setExpanded((prev) => !prev)}
-        animate={{
-          width: expanded ? 290 : 155,
-          height: 44,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 400,
-          damping: 30,
-        }}
-        className="relative bg-[#2b2d31] border border-[#3f4147] rounded-full shadow-lg shadow-black/40 overflow-hidden cursor-pointer select-none flex items-center justify-center transition-colors hover:border-[#4e5058] px-3.5"
-      >
-        <AnimatePresence mode="wait">
-          {!expanded ? (
-            <motion.div
-              key="collapsed"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center gap-2.5"
-            >
-              <Image
-                src="/logo.png"
-                alt="KeraVokasi"
-                width={26}
-                height={26}
-                className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
-                priority
-              />
-              <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
-                KeraVokasi
-              </span>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="expanded"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Image
-                  src="/logo.png"
-                  alt="KeraVokasi"
-                  width={26}
-                  height={26}
-                  className="w-6 h-6 rounded-full object-cover border border-[#4e5058]"
-                />
-                <span className="text-xs font-semibold text-[#f2f3f5] tracking-wide whitespace-nowrap">
-                  KeraVokasi
-                </span>
-              </div>
-              <Button
-                variant="destructive"
-                size="xs"
-                className="rounded-full bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-xs px-3 py-1 font-medium h-auto"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClear();
-                }}
-              >
-                Hapus
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
-  );
-}
-
-// ─── AccountSwitcher (Shadcn DropdownMenu & Badge) ────────────────────────────
-
-interface AccountSwitcherProps {
-  currentUser: UserProfile | null;
-  demoUsers: DemoUser[];
-  onSwitchUser: (username: string | null) => Promise<void>;
-}
-
-function AccountSwitcher({
-  currentUser,
-  demoUsers,
-  onSwitchUser,
-}: AccountSwitcherProps) {
-  const role = currentUser?.role || "guest";
-  const badge = getRoleBadgeStyle(role);
-
-  const quotaDisplay =
-    role === "admin"
-      ? "∞"
-      : currentUser?.remainingQuota !== null &&
-        currentUser?.remainingQuota !== undefined
-      ? `${currentUser.remainingQuota}`
-      : "-";
-
-  return (
-    <div className="fixed top-5 right-4 sm:right-6 z-50 flex items-center gap-2">
-      {role === "guest" && (
-        <Link href="/login">
-          <Button
-            size="sm"
-            className="bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-full text-xs font-semibold px-3 py-1 h-8 shadow-md cursor-pointer transition-all"
-          >
-            <LogIn className="w-3.5 h-3.5 mr-1" />
-            <span className="hidden sm:inline">Masuk</span>
-          </Button>
-        </Link>
-      )}
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2 px-3 py-1.5 h-auto rounded-full bg-[#2b2d31] hover:bg-[#35373c] border-[#3f4147] hover:border-[#4e5058] shadow-lg shadow-black/30 transition-all select-none text-[#dbdee1]"
-          >
-            <Badge
-              variant="outline"
-              className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
-            >
-              {badge.label}
-            </Badge>
-            <span className="hidden sm:inline-block text-xs font-medium text-[#f2f3f5] max-w-[90px] truncate">
-              {currentUser?.username || "Guest"}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-              <Zap className="w-3 h-3" />
-              <span>{quotaDisplay}</span>
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#949ba4]" />
-          </Button>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent
-          align="end"
-          className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#2b2d31] border-[#3f4147] shadow-2xl p-4 text-xs z-50 flex flex-col gap-3.5"
-        >
-          {/* User Profile Header */}
-          <div className="flex flex-col gap-2 pb-3 border-b border-[#383a40]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="w-8 h-8 rounded-full bg-[#383a40] flex items-center justify-center text-[#dbdee1]">
-                  <AvatarFallback className="bg-[#383a40] text-xs">
-                    <User className="w-4 h-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm text-[#f2f3f5]">
-                    {currentUser?.username || "Guest (Tamu)"}
-                  </span>
-                  <span className="text-[11px] text-[#949ba4]">
-                    {role === "admin"
-                      ? "Akses Administrator Penuh"
-                      : role === "guru"
-                      ? "Akses Tenaga Pendidik"
-                      : role === "siswa"
-                      ? "Akses Peserta Didik"
-                      : "Pengunjung Publik"}
-                  </span>
-                </div>
-              </div>
-              <Badge
-                variant="outline"
-                className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
-              >
-                {badge.label}
-              </Badge>
-            </div>
-
-            {/* Sisa Kuota Banner */}
-            <div className="flex items-center justify-between bg-[#1e1f22] px-3 py-2 rounded-xl border border-[#383a40]">
-              <span className="text-[#949ba4] text-xs flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                Sisa Kuota Harian:
-              </span>
-              <span className="font-mono font-semibold text-amber-400 text-xs">
-                {role === "admin"
-                  ? "Tanpa Batas (∞)"
-                  : `${currentUser?.remainingQuota ?? 0} / ${
-                      currentUser?.dailyLimit ?? 0
-                    } pesan`}
-              </span>
-            </div>
-
-            {/* Allowed Categories */}
-            <div className="flex flex-col gap-1.5 pt-1">
-              <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                Topik yang Diizinkan:
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {currentUser?.allowedCategories &&
-                currentUser.allowedCategories[0] === "*" ? (
-                  <Badge
-                    variant="outline"
-                    className="px-2 py-0.5 rounded-md bg-purple-500/15 border-purple-500/30 text-[11px] text-purple-300 font-medium"
-                  >
-                    ★ Semua Topik & Pencarian Web
-                  </Badge>
-                ) : (
-                  currentUser?.allowedCategories?.map((cat) => (
-                    <Badge
-                      key={cat}
-                      variant="outline"
-                      className="px-2 py-0.5 rounded-md bg-[#1e1f22] border-[#383a40] text-[10px] text-[#dbdee1] font-normal"
-                    >
-                      {cat}
-                    </Badge>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Switch User Selection */}
-          <DropdownMenuGroup className="flex flex-col gap-1.5">
-            <DropdownMenuLabel className="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wider px-1 py-0.5">
-              Ganti Akun Demo (RBAC)
-            </DropdownMenuLabel>
-
-            {/* Guest Option */}
-            <DropdownMenuItem
-              onClick={() => onSwitchUser(null)}
-              className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
-                role === "guest"
-                  ? "bg-[#383a40] border-[#5865f2] text-white"
-                  : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-zinc-700/60 flex items-center justify-center text-zinc-300 text-[11px]">
-                  <LogOut className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-medium text-xs">Mode Tamu (Guest)</span>
-                  <span className="text-[10px] text-[#949ba4]">
-                    Batas 10 pesan/hari • Tanpa Token
-                  </span>
-                </div>
-              </div>
-              {role === "guest" && <Check className="w-4 h-4 text-[#5865f2]" />}
-            </DropdownMenuItem>
-
-            {/* Registered Demo Users */}
-            {demoUsers.map((user) => {
-              const isCurrent = currentUser?.username === user.username;
-              const userBadge = getRoleBadgeStyle(user.role);
-
-              return (
-                <DropdownMenuItem
-                  key={user.id}
-                  onClick={() => onSwitchUser(user.username)}
-                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
-                    isCurrent
-                      ? "bg-[#383a40] border-[#5865f2] text-white"
-                      : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-[#2b2d31] flex items-center justify-center text-[#dbdee1] text-[11px]">
-                      <User className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-xs">
-                          {user.username}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full border ${userBadge.bg}`}
-                        >
-                          {userBadge.label}
-                        </Badge>
-                      </div>
-                      <span className="text-[10px] text-[#949ba4]">
-                        {user.role === "admin"
-                          ? "Tanpa batas kuota"
-                          : user.role === "guru"
-                          ? "200 pesan/hari + Riset Web"
-                          : "50 pesan/hari"}
-                      </span>
-                    </div>
-                  </div>
-                  {isCurrent && <Check className="w-4 h-4 text-[#5865f2]" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuGroup>
-
-          {/* Navigation to Full Auth Pages */}
-          <DropdownMenuSeparator className="bg-[#383a40]" />
-          <DropdownMenuGroup className="flex flex-col gap-1">
-            <DropdownMenuItem asChild className="p-2 rounded-xl cursor-pointer focus:bg-[#383a40]">
-              <Link href="/login" className="flex items-center gap-2 text-xs text-[#dbdee1] hover:text-white">
-                <LogIn className="w-3.5 h-3.5 text-[#5865f2]" />
-                <span>Buka Halaman Login</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="p-2 rounded-xl cursor-pointer focus:bg-[#383a40]">
-              <Link href="/signup" className="flex items-center gap-2 text-xs text-[#dbdee1] hover:text-white">
-                <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Daftar Akun Baru</span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
 }
 
 // ─── TypingIndicator ──────────────────────────────────────────────────────────
@@ -803,17 +418,15 @@ export default function ChatPage() {
 
   return (
     <div className="relative flex flex-col h-screen bg-[#313338] text-[#dbdee1] overflow-hidden">
-      {/* Dynamic Island Nav */}
-      <DynamicIslandNav onClear={() => setShowConfirm(true)} />
-
-      {/* RBAC Account Switcher & Quota Status (Shadcn DropdownMenu & Badge) */}
-      <AccountSwitcher
+      {/* ── Framer Sidebar Dock Menu (Combined Navigation, Profile, Quota & Actions) ── */}
+      <SidebarDockMenu
         currentUser={currentUser}
         demoUsers={demoUsers}
         onSwitchUser={handleSwitchUser}
+        onClear={() => setShowConfirm(true)}
       />
 
-      {/* Shadcn Dialog Confirmation for Clearing Conversation */}
+      {/* ── Shadcn Dialog Confirmation for Clearing Conversation ── */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
           <DialogHeader>
@@ -844,10 +457,10 @@ export default function ChatPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Chat area */}
-      <div className="relative z-10 flex flex-col flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ── Chat Main Area ── */}
+      <div className="relative z-10 flex flex-col flex-1 min-h-0 w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Messages scroll container */}
-        <div className="flex-1 overflow-y-auto chat-scroll pt-24 pb-4">
+        <div className="flex-1 overflow-y-auto chat-scroll pt-20 sm:pt-6 pb-4">
           <div className="flex flex-col gap-4 py-4">
             {messages.map((msg) => (
               <ChatBubble key={msg.id} message={msg} />
