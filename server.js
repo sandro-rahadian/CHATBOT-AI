@@ -7,6 +7,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { tavily } from "@tavily/core";
 import mysql from "mysql2/promise";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
 dotenv.config();
@@ -81,6 +82,229 @@ export function getDbPool() {
     return cachedDbPool;
   }
   return null;
+}
+
+// ---------- Penyimpanan Percakapan & Riwayat Chat (Multi-Session & Isolasi Akun) ----------
+export const inMemoryConversations = new Map();
+export const inMemoryMessages = new Map();
+
+/**
+ * Inisialisasi tabel percakapan dan pesan di MySQL jika belum ada.
+ */
+export async function initConversationTables(pool = getDbPool()) {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id INT NULL,
+        title VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_conv_user (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conversation_messages (
+        id VARCHAR(36) PRIMARY KEY,
+        conversation_id VARCHAR(36) NOT NULL,
+        role ENUM('user', 'assistant') NOT NULL,
+        content TEXT NOT NULL,
+        sources JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_msg_conv (conversation_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+  } catch (err) {
+    console.warn("[Conversations] Inisialisasi tabel percakapan:", err?.message ?? err);
+  }
+}
+
+/**
+ * Membuat percakapan baru untuk user tertentu.
+ */
+export async function createConversation({ userId = null, title = "Obrolan Baru" } = {}) {
+  const convId = crypto.randomUUID();
+  const cleanTitle = (title || "Obrolan Baru").trim().slice(0, 100);
+  const now = new Date();
+
+  const conv = {
+    id: convId,
+    user_id: userId,
+    title: cleanTitle || "Obrolan Baru",
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+
+  inMemoryConversations.set(convId, conv);
+  inMemoryMessages.set(convId, []);
+
+  const pool = getDbPool();
+  if (pool) {
+    try {
+      await pool.query(
+        "INSERT INTO conversations (id, user_id, title) VALUES (?, ?, ?)",
+        [convId, userId, cleanTitle]
+      );
+    } catch (err) {
+      console.warn("[createConversation DB warning]", err?.message ?? err);
+    }
+  }
+
+  return conv;
+}
+
+/**
+ * Mengambil daftar riwayat percakapan milik user tertentu (terisolasi per user_id).
+ */
+export async function getConversationsByUser(userId) {
+  const pool = getDbPool();
+  if (pool && userId !== null && userId !== undefined) {
+    try {
+      const [rows] = await pool.query(
+        "SELECT id, user_id, title, created_at, updated_at FROM conversations WHERE user_id = ? ORDER BY updated_at DESC",
+        [userId]
+      );
+      if (Array.isArray(rows)) {
+        return rows;
+      }
+    } catch (err) {
+      console.warn("[getConversationsByUser DB warning]", err?.message ?? err);
+    }
+  }
+
+  // Fallback in-memory
+  const list = [];
+  for (const conv of inMemoryConversations.values()) {
+    if (conv.user_id === userId) {
+      list.push(conv);
+    }
+  }
+  return list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+}
+
+/**
+ * Mengambil satu percakapan beserta seluruh pesannya dengan verifikasi hak milik (user_id).
+ */
+export async function getConversationWithMessages(conversationId, userId) {
+  const pool = getDbPool();
+  if (pool) {
+    try {
+      const [convRows] = await pool.query(
+        "SELECT id, user_id, title, created_at, updated_at FROM conversations WHERE id = ? LIMIT 1",
+        [conversationId]
+      );
+      if (Array.isArray(convRows) && convRows.length > 0) {
+        const conv = convRows[0];
+        // Isolasi akun: jika userId tidak cocok, tolak akses
+        if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+          return { error: "forbidden", status: 403 };
+        }
+        const [msgRows] = await pool.query(
+          "SELECT id, role, content, sources, created_at FROM conversation_messages WHERE conversation_id = ? ORDER BY created_at ASC",
+          [conversationId]
+        );
+        const parsedMsgs = (msgRows || []).map((m) => ({
+          ...m,
+          sources: typeof m.sources === "string" ? JSON.parse(m.sources) : m.sources || [],
+        }));
+        return { conversation: { ...conv, messages: parsedMsgs } };
+      }
+    } catch (err) {
+      console.warn("[getConversationWithMessages DB warning]", err?.message ?? err);
+    }
+  }
+
+  // Fallback in-memory
+  const conv = inMemoryConversations.get(conversationId);
+  if (!conv) {
+    return { error: "not_found", status: 404 };
+  }
+  if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+    return { error: "forbidden", status: 403 };
+  }
+  const msgs = inMemoryMessages.get(conversationId) || [];
+  return { conversation: { ...conv, messages: msgs } };
+}
+
+/**
+ * Menambahkan pesan ke percakapan tertentu dan memperbarui timestamp updated_at.
+ */
+export async function appendMessageToConversation(conversationId, { role, content, sources = [] }) {
+  const msgId = crypto.randomUUID();
+  const now = new Date();
+  const msgItem = {
+    id: msgId,
+    conversation_id: conversationId,
+    role,
+    content,
+    sources: sources || [],
+    created_at: now.toISOString(),
+  };
+
+  const msgs = inMemoryMessages.get(conversationId) || [];
+  msgs.push(msgItem);
+  inMemoryMessages.set(conversationId, msgs);
+
+  const conv = inMemoryConversations.get(conversationId);
+  if (conv) {
+    conv.updated_at = now.toISOString();
+  }
+
+  const pool = getDbPool();
+  if (pool) {
+    try {
+      await pool.query(
+        "INSERT INTO conversation_messages (id, conversation_id, role, content, sources) VALUES (?, ?, ?, ?, ?)",
+        [msgId, conversationId, role, content, JSON.stringify(sources || [])]
+      );
+      await pool.query(
+        "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [conversationId]
+      );
+    } catch (err) {
+      console.warn("[appendMessageToConversation DB warning]", err?.message ?? err);
+    }
+  }
+
+  return msgItem;
+}
+
+/**
+ * Menghapus percakapan beserta seluruh pesannya dengan verifikasi hak milik (user_id).
+ */
+export async function deleteConversation(conversationId, userId) {
+  const pool = getDbPool();
+  if (pool) {
+    try {
+      const [convRows] = await pool.query(
+        "SELECT user_id FROM conversations WHERE id = ? LIMIT 1",
+        [conversationId]
+      );
+      if (Array.isArray(convRows) && convRows.length > 0) {
+        const conv = convRows[0];
+        if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+          return { error: "forbidden", status: 403 };
+        }
+        await pool.query("DELETE FROM conversation_messages WHERE conversation_id = ?", [conversationId]);
+        await pool.query("DELETE FROM conversations WHERE id = ?", [conversationId]);
+      }
+    } catch (err) {
+      console.warn("[deleteConversation DB warning]", err?.message ?? err);
+    }
+  }
+
+  const conv = inMemoryConversations.get(conversationId);
+  if (conv) {
+    if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+      return { error: "forbidden", status: 403 };
+    }
+    inMemoryConversations.delete(conversationId);
+    inMemoryMessages.delete(conversationId);
+  }
+
+  return { success: true };
 }
 
 /**
@@ -535,7 +759,7 @@ ${knowledgeSection}${guideSection}${tavilySection}`;
  * Validasi body request. Return { error } atau { message, history }.
  */
 export function validateChatBody(body) {
-  const { message, history = [] } = body ?? {};
+  const { message, history = [], conversation_id } = body ?? {};
 
   if (typeof message !== "string" || message.trim() === "") {
     return { error: "Field 'message' wajib diisi dan tidak boleh kosong" };
@@ -557,7 +781,11 @@ export function validateChatBody(body) {
       };
     }
   }
-  return { message: message.trim(), history };
+  return {
+    message: message.trim(),
+    history,
+    conversation_id: typeof conversation_id === "string" && conversation_id.trim() !== "" ? conversation_id.trim() : null,
+  };
 }
 
 /**
@@ -736,6 +964,123 @@ export function isCategoryAllowed(category, allowedCategories) {
 
   const target = normalize(category);
   return allowedCategories.some((allowed) => normalize(allowed) === target);
+}
+
+/**
+ * Seleksi pengetahuan relevan (Knowledge Retrieval Efisien)
+ * Menghindari pengiriman seluruh tabel database ke prompt Gemini secara boros.
+ * Hanya memuat baris tabel dan dokumen yang sesuai topik pertanyaan.
+ */
+export function selectRelevantKnowledge(message, items = [], userAllowedCategories = ["*"], userSchoolId = null) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { selectedItems: [], includeGuide: false };
+  }
+
+  const text = (message || "").toLowerCase().trim();
+
+  // 1. Sapaan singkat atau ucapan terima kasih -> 0 tabel database diperlukan (hemat token)
+  const cleanGreetingText = text.replace(/[^a-z0-9\s]/g, " ").trim();
+  const greetingWords = cleanGreetingText.split(/\s+/).filter(Boolean);
+  const commonGreetingWords = new Set([
+    "halo", "hai", "hi", "hello", "selamat", "pagi", "siang", "sore", "malam",
+    "assalamualaikum", "tes", "test", "terima", "kasih", "makasih", "thanks", "thank", "you",
+    "ok", "oke", "siap", "hei", "hey", "banyak"
+  ]);
+  const isGreetingOnly =
+    greetingWords.length > 0 && greetingWords.every((w) => commonGreetingWords.has(w));
+  const isIdentityQuestion =
+    /^(siapa kamu|kamu siapa|apa itu keravokasi|tentang keravokasi|profil keravokasi)/i.test(cleanGreetingText);
+
+  if (isGreetingOnly || isIdentityQuestion) {
+    return { selectedItems: [], includeGuide: false };
+  }
+
+  // 2. Pertanyaan panduan/rekomendasi jurusan -> Sertakan dokumen panduan
+  const isRecommendation = /\b(rekomendasi|saran|pilih|memilih|bingung|cocok|bakat|minat|prospek|peluang kerja|gaji|perbedaan|bedanya)\b/i.test(text);
+
+  // 3. Deteksi target sekolah tertentu jika disebutkan di pertanyaan
+  let schoolKeyword = null;
+  if (/\b(telkom|moklet)\b/i.test(text)) schoolKeyword = "telkom";
+  else if (/\b(smkn?\s*3|smk\s*3)\b/i.test(text)) schoolKeyword = "3";
+  else if (/\b(smkn?\s*4|smk\s*4|grafika)\b/i.test(text)) schoolKeyword = "4";
+  else if (/\b(smkn?\s*5|smk\s*5)\b/i.test(text)) schoolKeyword = "5";
+  else if (/\b(smkn?\s*6|smk\s*6)\b/i.test(text)) schoolKeyword = "6";
+
+  // 4. Deteksi kategori pertanyaan
+  const detectedCategory = detectQuestionCategory(message);
+
+  // 5. Filter dasar berdasarkan izin user (RBAC) & isolasi sekolah
+  let allowedItems = items.filter((item) => {
+    const catOk = isCategoryAllowed(item.category, userAllowedCategories);
+    const schoolOk = !userSchoolId || item.school_id === userSchoolId;
+    return catOk && schoolOk;
+  });
+
+  // Jika sekolah tertentu disebutkan, utamakan baris dari sekolah tersebut
+  if (schoolKeyword) {
+    const schoolItems = allowedItems.filter((item) => {
+      const name = (item.school_name || "smk telkom malang").toLowerCase();
+      if (schoolKeyword === "telkom") return name.includes("telkom");
+      return name.includes(`smkn ${schoolKeyword}`) || name.includes(`smk negeri ${schoolKeyword}`) || name.includes(`smk ${schoolKeyword}`);
+    });
+    if (schoolItems.length > 0) {
+      allowedItems = schoolItems;
+    }
+  }
+
+  // 6. Filter spesifik berdasarkan kategori pertanyaan jika ada
+  let categoryFiltered = allowedItems;
+  if (detectedCategory) {
+    const normalizeCat = (cat) => {
+      const c = String(cat).toLowerCase();
+      if (c.includes("daftar") || c.includes("ppdb")) return "Pendaftaran";
+      if (c.includes("ekskul") || c.includes("kegiatan")) return "Kegiatan";
+      if (c.includes("alamat") || c.includes("kontak")) return "Alamat & Kontak";
+      if (c.includes("jurusan")) return "Jurusan";
+      if (c.includes("profil")) return "Profil";
+      if (c.includes("fasilitas")) return "Fasilitas";
+      return cat;
+    };
+
+    const targetCat = normalizeCat(detectedCategory);
+    const matched = allowedItems.filter((item) => normalizeCat(item.category) === targetCat);
+    if (matched.length > 0) {
+      categoryFiltered = matched;
+    }
+  }
+
+  // 7. Relevance scoring berbasis kata kunci teks
+  const words = text
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  const scored = categoryFiltered.map((item) => {
+    let score = 0;
+    const itemText = `${item.title || ""} ${item.keywords || ""} ${item.content || ""}`.toLowerCase();
+    for (const word of words) {
+      if (itemText.includes(word)) {
+        score += 2;
+      }
+    }
+    const titleText = (item.title || "").toLowerCase();
+    for (const word of words) {
+      if (titleText.includes(word)) {
+        score += 3;
+      }
+    }
+    return { item, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Ambil maksimal 4 item teratas (atau jika 0 kata kunci, tetap 4 item teratas dari kategori)
+  const topItems = scored.slice(0, 4).map((s) => s.item);
+
+  return {
+    selectedItems: topItems,
+    includeGuide: isRecommendation,
+  };
 }
 
 /**
@@ -1133,6 +1478,75 @@ export function createApp({
     });
   });
 
+  // GET /conversations - Daftar riwayat percakapan milik pengguna (terisolasi per user)
+  app.get("/conversations", async (req, res) => {
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid || !userAccess.user?.id) {
+      return res.status(401).json({ error: "Harap login untuk melihat riwayat percakapan." });
+    }
+
+    const conversations = await getConversationsByUser(userAccess.user.id);
+    return res.json({ conversations });
+  });
+
+  // POST /conversations - Membuat sesi percakapan baru
+  app.post("/conversations", async (req, res) => {
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid || !userAccess.user?.id) {
+      return res.status(401).json({ error: "Harap login untuk membuat percakapan baru." });
+    }
+
+    const { title } = req.body ?? {};
+    const conversation = await createConversation({
+      userId: userAccess.user.id,
+      title: title || "Obrolan Baru",
+    });
+    return res.status(201).json({ conversation });
+  });
+
+  // GET /conversations/:id - Mengambil percakapan beserta seluruh pesannya (dengan isolasi user)
+  app.get("/conversations/:id", async (req, res) => {
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid || !userAccess.user?.id) {
+      return res.status(401).json({ error: "Harap login untuk melihat pesan percakapan." });
+    }
+
+    const result = await getConversationWithMessages(req.params.id, userAccess.user.id);
+    if (result.error === "forbidden") {
+      return res.status(403).json({ error: "Anda tidak memiliki izin untuk melihat percakapan ini." });
+    }
+    if (result.error === "not_found" || !result.conversation) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan." });
+    }
+    return res.json(result);
+  });
+
+  // DELETE /conversations/:id - Menghapus sesi percakapan (dengan isolasi user)
+  app.delete("/conversations/:id", async (req, res) => {
+    const token = req.headers["x-api-token"];
+    const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+    const userAccess = await resolveUserAccess(token, clientIp);
+
+    if (!userAccess.valid || !userAccess.user?.id) {
+      return res.status(401).json({ error: "Harap login untuk menghapus percakapan." });
+    }
+
+    const result = await deleteConversation(req.params.id, userAccess.user.id);
+    if (result.error === "forbidden") {
+      return res.status(403).json({ error: "Anda tidak memiliki izin untuk menghapus percakapan ini." });
+    }
+    return res.json({ message: "Percakapan berhasil dihapus." });
+  });
+
   // POST /sync - Memperbarui cache dari MySQL online tanpa restart & memproses antrean ACC (approved)
   app.post("/sync", async (_req, res) => {
     const syncResult = await syncApprovedPendingKnowledge();
@@ -1198,17 +1612,17 @@ export function createApp({
 
     try {
       const contents = toGeminiContents(parsed.history, parsed.message);
-      let items = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
-      const guideDoc = loadGuideDocument();
+      const allItems = (cachedKnowledgeItems && cachedKnowledgeItems.length > 0) ? cachedKnowledgeItems : loadKnowledgeBase();
 
-      // Filter database berdasarkan kategori yang diizinkan dan isolasi sekolah (school_id)
-      if (Array.isArray(items) && items.length > 0) {
-        items = items.filter((item) => {
-          const catOk = isCategoryAllowed(item.category, user.allowedCategories);
-          const schoolOk = !user.schoolId || item.school_id === user.schoolId;
-          return catOk && schoolOk;
-        });
-      }
+      // 4. Seleksi Cerdas Basis Pengetahuan (Knowledge Retrieval Efisien)
+      const { selectedItems, includeGuide } = selectRelevantKnowledge(
+        parsed.message,
+        allItems,
+        user.allowedCategories,
+        user.schoolId
+      );
+
+      const guideDoc = includeGuide ? loadGuideDocument() : "";
 
       // Cek apakah memerlukan pencarian web (Tavily) - hanya jika canWebSearch diizinkan (guru & admin)
       let webResultsText = "";
@@ -1228,7 +1642,28 @@ export function createApp({
         }
       }
 
-      const currentPrompt = buildSystemPrompt(items, guideDoc, webResultsText);
+      // 5. Hubungkan ke sesi percakapan jika user terautentikasi
+      let activeConv = null;
+      if (user.id) {
+        if (parsed.conversation_id) {
+          const existing = await getConversationWithMessages(parsed.conversation_id, user.id);
+          if (existing && !existing.error) {
+            activeConv = existing.conversation;
+          }
+        }
+        if (!activeConv) {
+          activeConv = await createConversation({
+            userId: user.id,
+            title: parsed.message.slice(0, 45),
+          });
+        }
+        await appendMessageToConversation(activeConv.id, {
+          role: "user",
+          content: parsed.message,
+        });
+      }
+
+      const currentPrompt = buildSystemPrompt(selectedItems, guideDoc, webResultsText);
       const reply = await withRetry(() => generate(contents, currentPrompt), {
         retries,
         delayMs: retryDelayMs,
@@ -1243,13 +1678,23 @@ export function createApp({
       // Kurangi kuota harian user setelah pesan berhasil dijawab
       await consumeUserQuota(userAccess);
 
-      // Ekstrak sumber data referensi resmi
-      const sources = extractSources(parsed.message, reply, items);
+      // Ekstrak sumber data referensi resmi (dari selectedItems atau allItems yang cocok)
+      const sources = extractSources(parsed.message, reply, selectedItems.length > 0 ? selectedItems : allItems);
+
+      // Simpan balasan assistant ke percakapan jika user terautentikasi
+      if (activeConv) {
+        await appendMessageToConversation(activeConv.id, {
+          role: "assistant",
+          content: reply,
+          sources,
+        });
+      }
 
       return res.json({
         reply,
         role: user.role,
         sources,
+        conversation_id: activeConv ? activeConv.id : null,
       });
     } catch (err) {
       console.error("[Gemini error]", err?.message ?? err);
@@ -1290,6 +1735,9 @@ if (isMain) {
     console.log(`Timeout ${TIMEOUT_MS} ms, coba ulang maks ${MAX_RETRIES}x`);
     console.log(`CORS diizinkan untuk: ${rawOrigins.join(", ")}`);
     console.log(`Tavily Web Search: ${process.env.TAVILY_API_KEY ? "Aktif" : "Tidak aktif (TAVILY_API_KEY kosong)"}`);
+
+    // Inisialisasi tabel percakapan & multi-session
+    await initConversationTables();
 
     // Coba sambungkan ke database MySQL online (Railway)
     const dbItems = await fetchKnowledgeFromDb();

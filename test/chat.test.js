@@ -12,6 +12,12 @@ import {
   isCategoryAllowed,
   resolveUserAccess,
   extractSources,
+  selectRelevantKnowledge,
+  createConversation,
+  getConversationsByUser,
+  getConversationWithMessages,
+  deleteConversation,
+  appendMessageToConversation,
 } from "../server.js";
 
 let server, base, lastContents;
@@ -518,5 +524,129 @@ test("POST /register: validasi dan pendaftaran sukses", async () => {
   assert.equal(data.user.username, "siswa_baru_keren");
   assert.equal(data.user.role, "siswa");
   assert.ok(data.token.startsWith("token-"));
+});
+
+test("selectRelevantKnowledge: seleksi cerdas dan hemat token", () => {
+  const items = loadKnowledgeBase();
+  assert.ok(items.length > 5, "Database harus memiliki item");
+
+  // 1. Sapaan singkat -> 0 item dan tidak menyertakan panduan (hemat token)
+  const greetingResult = selectRelevantKnowledge("Halo, selamat pagi!", items);
+  assert.equal(greetingResult.selectedItems.length, 0);
+  assert.equal(greetingResult.includeGuide, false);
+
+  // 2. Pertanyaan jurusan SMKN 4 -> hanya mengambil jurusan yang relevan (maks 4)
+  const majorResult = selectRelevantKnowledge("Apa saja jurusan di SMKN 4 Malang?", items);
+  assert.ok(majorResult.selectedItems.length > 0 && majorResult.selectedItems.length <= 4);
+  assert.equal(majorResult.includeGuide, false);
+  for (const item of majorResult.selectedItems) {
+    assert.equal(item.category, "Jurusan");
+  }
+
+  // 3. Rekomendasi/panduan pemilihan jurusan -> menyertakan dokumen panduan (includeGuide: true)
+  const guideResult = selectRelevantKnowledge("Saya bingung mau pilih jurusan apa, minta rekomendasi dong", items);
+  assert.equal(guideResult.includeGuide, true);
+
+  // 4. Batasan kuota item (tidak pernah mengirim seluruh tabel ratusan baris)
+  const bigList = Array.from({ length: 50 }, (_, i) => ({
+    id: i + 1,
+    category: "Jurusan",
+    title: `Jurusan ${i}`,
+    content: `Konten jurusan ${i}`,
+    keywords: "jurusan coding komputer",
+  }));
+  const cappedResult = selectRelevantKnowledge("jurusan komputer", bigList);
+  assert.ok(cappedResult.selectedItems.length <= 4, "Item tidak boleh melebihi batas 4");
+});
+
+test("Conversation API: Endpoint percakapan & isolasi ketat antar-user", async () => {
+  const siswaToken = "token-siswa-123";
+  const guruToken = "token-guru-456";
+
+  // 1. GET /conversations tanpa token -> 401
+  const resNoAuth = await fetch(`${base}/conversations`);
+  assert.equal(resNoAuth.status, 401);
+
+  // 2. POST /conversations: Siswa membuat percakapan baru
+  const resCreate = await fetch(`${base}/conversations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-token": siswaToken,
+    },
+    body: JSON.stringify({ title: "Tanya Jurusan RPL" }),
+  });
+  assert.equal(resCreate.status, 201);
+  const { conversation: siswaConv } = await resCreate.json();
+  assert.ok(siswaConv.id);
+  assert.equal(siswaConv.title, "Tanya Jurusan RPL");
+
+  // 3. GET /conversations: Siswa melihat riwayat miliknya
+  const resListSiswa = await fetch(`${base}/conversations`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  assert.equal(resListSiswa.status, 200);
+  const { conversations: listSiswa } = await resListSiswa.json();
+  assert.ok(listSiswa.some((c) => c.id === siswaConv.id));
+
+  // 4. Isolasi Akun: Guru TIDAK BOLEH melihat percakapan milik Siswa dalam daftar riwayatnya
+  const resListGuru = await fetch(`${base}/conversations`, {
+    headers: { "x-api-token": guruToken },
+  });
+  assert.equal(resListGuru.status, 200);
+  const { conversations: listGuru } = await resListGuru.json();
+  assert.ok(!listGuru.some((c) => c.id === siswaConv.id), "Percakapan siswa tidak boleh bocor ke guru");
+
+  // 5. Isolasi Akun: Guru mencoba akses langsung GET /conversations/:id milik Siswa -> 403 Forbidden
+  const resForbiddenGet = await fetch(`${base}/conversations/${siswaConv.id}`, {
+    headers: { "x-api-token": guruToken },
+  });
+  assert.equal(resForbiddenGet.status, 403);
+
+  // 6. Isolasi Akun: Guru mencoba DELETE /conversations/:id milik Siswa -> 403 Forbidden
+  const resForbiddenDel = await fetch(`${base}/conversations/${siswaConv.id}`, {
+    method: "DELETE",
+    headers: { "x-api-token": guruToken },
+  });
+  assert.equal(resForbiddenDel.status, 403);
+
+  // 7. POST /chat dengan conversation_id: pesan tersimpan di thread percakapan siswa
+  const resChat = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-token": siswaToken,
+    },
+    body: JSON.stringify({
+      conversation_id: siswaConv.id,
+      message: "Berapa lama belajar di RPL?",
+    }),
+  });
+  assert.equal(resChat.status, 200);
+  const chatJson = await resChat.json();
+  assert.equal(chatJson.conversation_id, siswaConv.id);
+
+  // 8. Siswa mengambil detail percakapan: pesan user dan balasan bot sudah tersimpan
+  const resDetail = await fetch(`${base}/conversations/${siswaConv.id}`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  assert.equal(resDetail.status, 200);
+  const detailJson = await resDetail.json();
+  assert.ok(detailJson.conversation.messages.length >= 2);
+  assert.equal(detailJson.conversation.messages[0].role, "user");
+  assert.equal(detailJson.conversation.messages[1].role, "assistant");
+
+  // 9. Siswa menghapus percakapannya sendiri -> Sukses
+  const resDel = await fetch(`${base}/conversations/${siswaConv.id}`, {
+    method: "DELETE",
+    headers: { "x-api-token": siswaToken },
+  });
+  assert.equal(resDel.status, 200);
+
+  // 10. Setelah dihapus, GET /conversations/:id -> 404 Not Found
+  const resAfterDel = await fetch(`${base}/conversations/${siswaConv.id}`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  assert.equal(resAfterDel.status, 404);
 });
 
