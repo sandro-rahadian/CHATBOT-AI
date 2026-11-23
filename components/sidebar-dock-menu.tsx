@@ -125,13 +125,13 @@ export function SidebarDockMenu({
               href="/"
               className="flex items-center gap-2.5 overflow-hidden group select-none"
             >
-              <div className="relative shrink-0 w-9 h-9 rounded-[6px] overflow-hidden border border-[#2E2E2F] shadow-sm flex items-center justify-center bg-[#1E1F1F]">
+              <div className="relative shrink-0 w-9 h-9 flex items-center justify-center">
                 <Image
                   src="/logo.png"
                   alt="KeraVokasi"
                   width={34}
                   height={34}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   priority
                 />
               </div>

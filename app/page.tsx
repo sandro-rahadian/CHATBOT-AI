@@ -472,13 +472,13 @@ export default function ChatPage() {
             {messages.length === 0 ? (
               /* Welcome Card for Empty State */
               <div className="flex flex-col items-center justify-center text-center py-12 px-4 max-w-md mx-auto my-auto">
-                <div className="w-14 h-14 rounded-[8px] bg-[#1E1F1F] border border-[#2E2E2F] flex items-center justify-center shadow-lg mb-4">
+                <div className="w-16 h-16 flex items-center justify-center mb-4">
                   <Image
                     src="/logo.png"
                     alt="KeraVokasi"
-                    width={40}
-                    height={40}
-                    className="rounded-[6px] object-cover"
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-contain"
                     priority
                   />
                 </div>

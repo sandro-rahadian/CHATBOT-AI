@@ -112,13 +112,13 @@ export function SignupForm({
         {/* Header Branding */}
         <CardHeader className="text-center pb-2 pt-6">
           <div className="mx-auto mb-3 flex items-center justify-center gap-3">
-            <div className="w-11 h-11 rounded-[6px] border border-[#2E2E2F] bg-[#1E1F1F] flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 flex items-center justify-center">
               <Image
                 src="/logo.png"
                 alt="KeraVokasi"
-                width={36}
-                height={36}
-                className="rounded-[4px] object-cover"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
                 priority
               />
             </div>
