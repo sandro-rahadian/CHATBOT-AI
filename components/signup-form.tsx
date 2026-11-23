@@ -108,31 +108,31 @@ export function SignupForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="border-[#2E2E2F] bg-[#141515] shadow-2xl text-[#FFFFFF] rounded-[10px] overflow-hidden">
+      <Card className="border-[#EDEDED] bg-white shadow-xl text-[#171717] rounded-2xl overflow-hidden">
         {/* Header Branding */}
         <CardHeader className="text-center pb-2 pt-6">
           <div className="mx-auto mb-3 flex items-center justify-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center overflow-hidden">
               <Image
-                src="/logo.png"
+                src="/minimax-assets/apple-touch_v2ae52.png"
                 alt="KeraVokasi"
-                width={40}
-                height={40}
+                width={36}
+                height={36}
                 className="w-full h-full object-contain"
                 priority
               />
             </div>
             <div className="text-left">
-              <h2 className="text-xl font-bold tracking-tight text-[#FFFFFF]">
+              <h2 className="text-xl font-bold tracking-tight text-[#171717]">
                 KeraVokasi
               </h2>
-              <p className="text-xs text-[#B3B2B2]">Asisten AI SMK Malang</p>
+              <p className="text-xs text-[#666666]">Asisten AI SMK Malang</p>
             </div>
           </div>
-          <CardTitle className="text-base font-semibold text-[#FFFFFF]">
+          <CardTitle className="text-base font-semibold text-[#171717]">
             Daftar Akun Baru
           </CardTitle>
-          <CardDescription className="text-xs text-[#B3B2B2]">
+          <CardDescription className="text-xs text-[#666666]">
             Daftarkan akun untuk mendapatkan akses chat dan kuota harian
           </CardDescription>
         </CardHeader>
@@ -142,7 +142,7 @@ export function SignupForm({
             <FieldGroup className="space-y-3">
               {/* Nama Lengkap */}
               <Field>
-                <FieldLabel htmlFor="fullName" className="text-xs text-[#E0E0E0]">
+                <FieldLabel htmlFor="fullName" className="text-xs text-[#171717] font-medium">
                   Nama Lengkap
                 </FieldLabel>
                 <Input
@@ -151,14 +151,14 @@ export function SignupForm({
                   placeholder="Contoh: Rian Pratama"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="bg-[#0A0A0B] border-[#2E2E2F] text-sm text-[#FFFFFF] focus:border-[#FFFFFF] placeholder:text-[#5F5C5D] rounded-[6px] h-10 px-3"
+                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
                   required
                 />
               </Field>
 
               {/* Username */}
               <Field>
-                <FieldLabel htmlFor="signup-username" className="text-xs text-[#E0E0E0]">
+                <FieldLabel htmlFor="signup-username" className="text-xs text-[#171717] font-medium">
                   Username (Untuk Login) *
                 </FieldLabel>
                 <Input
@@ -167,43 +167,43 @@ export function SignupForm({
                   placeholder="Contoh: rian_siswa"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-[#0A0A0B] border-[#2E2E2F] text-sm text-[#FFFFFF] focus:border-[#FFFFFF] placeholder:text-[#5F5C5D] rounded-[6px] h-10 px-3"
+                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
                   required
                 />
               </Field>
 
               {/* Role Selection */}
               <Field>
-                <FieldLabel htmlFor="role-select" className="text-xs text-[#E0E0E0]">
+                <FieldLabel htmlFor="role-select" className="text-xs text-[#171717] font-medium">
                   Peran / Status Pengguna *
                 </FieldLabel>
                 <Select
                   value={role}
                   onValueChange={(val) => setRole(val as "siswa" | "guru")}
                 >
-                  <SelectTrigger className="w-full bg-[#0A0A0B] border-[#2E2E2F] text-xs text-[#FFFFFF] rounded-[6px] h-10 px-3 focus:border-[#FFFFFF]">
+                  <SelectTrigger className="w-full bg-[#FAFAFA] border-[#EDEDED] text-xs text-[#171717] rounded-lg h-10 px-3 focus:border-[#171717]">
                     <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1E1F1F] border-[#2E2E2F] text-xs text-[#E0E0E0] rounded-[6px] shadow-2xl">
-                    <SelectItem value="siswa" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                  <SelectContent className="bg-white border-[#EDEDED] text-xs text-[#171717] rounded-lg shadow-xl">
+                    <SelectItem value="siswa" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#FFFFFF]">Siswa / Calon Siswa</span>
-                        <Badge variant="outline" className="text-[9px] bg-[#2E2E2F] text-[#E0E0E0] border-[#3F3F3F] rounded-[4px]">
+                        <span className="font-semibold text-[#171717]">Siswa / Calon Siswa</span>
+                        <Badge variant="outline" className="text-[9px] bg-[#F5F5F5] text-[#525252] border-[#E5E5E5] rounded-md">
                           50 kuota/hari
                         </Badge>
                       </div>
                     </SelectItem>
-                    <SelectItem value="guru" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                    <SelectItem value="guru" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#FFFFFF]">Guru / Tenaga Pendidik</span>
-                        <Badge variant="outline" className="text-[9px] bg-[#FFFFFF] text-[#0A0A0B] border-transparent font-medium rounded-[4px]">
+                        <span className="font-semibold text-[#171717]">Guru / Tenaga Pendidik</span>
+                        <Badge variant="outline" className="text-[9px] bg-[#171717] text-white border-transparent font-medium rounded-md">
                           200 kuota/hari + Web
                         </Badge>
                       </div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <FieldDescription className="text-[10px] text-[#B3B2B2]">
+                <FieldDescription className="text-[10px] text-[#666666]">
                   {role === "guru"
                     ? "Guru berhak mengakses Profil Sekolah, Hasil Riset Web Otomatis, dan 200 pesan/hari."
                     : "Siswa berhak mengakses Jurusan, Fasilitas, Alamat & PPDB dengan 50 pesan/hari."}
@@ -212,27 +212,27 @@ export function SignupForm({
 
               {/* School Isolation Selection */}
               <Field>
-                <FieldLabel htmlFor="school-select" className="text-xs text-[#E0E0E0]">
+                <FieldLabel htmlFor="school-select" className="text-xs text-[#171717] font-medium">
                   Asal Sekolah (Opsional)
                 </FieldLabel>
                 <Select value={schoolId} onValueChange={setSchoolId}>
-                  <SelectTrigger className="w-full bg-[#0A0A0B] border-[#2E2E2F] text-xs text-[#FFFFFF] rounded-[6px] h-10 px-3 focus:border-[#FFFFFF]">
+                  <SelectTrigger className="w-full bg-[#FAFAFA] border-[#EDEDED] text-xs text-[#171717] rounded-lg h-10 px-3 focus:border-[#171717]">
                     <SelectValue placeholder="Pilih sekolah" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1E1F1F] border-[#2E2E2F] text-xs text-[#E0E0E0] rounded-[6px] shadow-2xl">
-                    <SelectItem value="all" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                  <SelectContent className="bg-white border-[#EDEDED] text-xs text-[#171717] rounded-lg shadow-xl">
+                    <SelectItem value="all" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       Semua Sekolah (Tanpa Filter Kunci)
                     </SelectItem>
-                    <SelectItem value="1" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                    <SelectItem value="1" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       SMK Telkom Malang
                     </SelectItem>
-                    <SelectItem value="2" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                    <SelectItem value="2" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       SMKN 4 Malang (Grafika)
                     </SelectItem>
-                    <SelectItem value="3" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                    <SelectItem value="3" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       SMKN 5 Malang
                     </SelectItem>
-                    <SelectItem value="4" className="cursor-pointer py-2 focus:bg-[#2E2E2F] focus:text-[#FFFFFF]">
+                    <SelectItem value="4" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       SMKN 3 Malang
                     </SelectItem>
                   </SelectContent>
@@ -241,7 +241,7 @@ export function SignupForm({
 
               {/* Password Field */}
               <Field>
-                <FieldLabel htmlFor="signup-password" className="text-xs text-[#E0E0E0]">
+                <FieldLabel htmlFor="signup-password" className="text-xs text-[#171717] font-medium">
                   Kata Sandi *
                 </FieldLabel>
                 <Input
@@ -250,7 +250,7 @@ export function SignupForm({
                   placeholder="Minimal 4 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#0A0A0B] border-[#2E2E2F] text-sm text-[#FFFFFF] focus:border-[#FFFFFF] placeholder:text-[#5F5C5D] rounded-[6px] h-10 px-3"
+                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
                   required
                 />
               </Field>
@@ -258,16 +258,16 @@ export function SignupForm({
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] font-semibold rounded-[6px] h-10 text-xs shadow-xs cursor-pointer transition-all mt-3"
+                className="w-full bg-[#171717] hover:bg-black text-white font-semibold rounded-lg h-10 text-xs shadow-xs cursor-pointer transition-all mt-3"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-[#0A0A0B]" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
                     Mendaftarkan Akun...
                   </>
                 ) : (
                   <>
-                    <UserPlus size={16} className="mr-2 text-[#0A0A0B]" />
+                    <UserPlus size={16} className="mr-2 text-white" />
                     Daftar Akun Sekarang
                   </>
                 )}
@@ -276,19 +276,19 @@ export function SignupForm({
           </form>
 
           {/* Navigation Links */}
-          <div className="mt-5 pt-4 border-t border-[#2E2E2F] flex flex-col gap-2.5 text-center text-xs">
-            <p className="text-[#B3B2B2]">
+          <div className="mt-5 pt-4 border-t border-[#EDEDED] flex flex-col gap-2.5 text-center text-xs">
+            <p className="text-[#666666]">
               Sudah memiliki akun terdaftar?{" "}
               <Link
                 href="/login"
-                className="text-[#FFFFFF] hover:underline font-semibold"
+                className="text-[#171717] hover:underline font-semibold"
               >
                 Masuk di Sini
               </Link>
             </p>
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-1.5 text-[#B3B2B2] hover:text-[#FFFFFF] transition-colors pt-1"
+              className="inline-flex items-center justify-center gap-1.5 text-[#666666] hover:text-[#171717] transition-colors pt-1"
             >
               <ArrowLeft size={14} />
               Kembali ke Halaman Utama

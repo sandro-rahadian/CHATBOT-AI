@@ -8,11 +8,7 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center p-4 sm:p-8 bg-[#0A0A0B] text-[#FFFFFF] overflow-hidden">
-      {/* Subtle monochrome ambient background */}
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
-
+    <div className="relative flex min-h-screen w-full items-center justify-center p-4 sm:p-8 bg-[#FAFAFA] text-[#171717] overflow-hidden">
       <div className="relative z-10 w-full max-w-md">
         <SignupForm />
       </div>
