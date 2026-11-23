@@ -47,26 +47,38 @@ const MAX_HISTORY = 30; // jumlah pesan history terakhir yang dikirim ke Gemini
 // ---------- Knowledge Base & System Instruction ----------
 let cachedKnowledgeItems = null;
 
+let cachedDbPool = null;
+
 /**
- * Membuat connection pool ke database MySQL online (Railway/Cloud).
+ * Membuat atau menggunakan singleton connection pool ke database MySQL online (Railway/Cloud).
  */
 export function getDbPool() {
+  if (cachedDbPool) return cachedDbPool;
+
   const url = process.env.MYSQL_URL || process.env.DATABASE_URL;
   if (url) {
-    return mysql.createPool(url);
+    cachedDbPool = mysql.createPool({
+      uri: url,
+      waitForConnections: true,
+      connectionLimit: 5,
+      queueLimit: 0,
+      connectTimeout: 5000,
+    });
+    return cachedDbPool;
   }
   if (process.env.MYSQLHOST || process.env.DB_HOST) {
-    return mysql.createPool({
+    cachedDbPool = mysql.createPool({
       host: process.env.MYSQLHOST || process.env.DB_HOST,
       user: process.env.MYSQLUSER || process.env.DB_USER || "root",
       password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
       database: process.env.MYSQLDATABASE || process.env.DB_NAME || "chatbot_sekolah",
       port: Number(process.env.MYSQLPORT || process.env.DB_PORT) || 3306,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 5,
       queueLimit: 0,
       connectTimeout: 5000,
     });
+    return cachedDbPool;
   }
   return null;
 }
