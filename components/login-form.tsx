@@ -6,10 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
-  User,
-  Lock,
   LogIn,
-  ArrowRight,
   ArrowLeft,
 } from "@/components/ui/icons";
 import { toast } from "sonner";
@@ -25,7 +22,6 @@ import {
 } from "@/components/ui/card";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -88,29 +84,31 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="border-[#3f4147] bg-[#2b2d31] shadow-2xl text-[#dbdee1] rounded-2xl overflow-hidden">
+      <Card className="border-[#2E2E2F] bg-[#141515] shadow-2xl text-[#FFFFFF] rounded-[10px] overflow-hidden">
         {/* Header Branding */}
         <CardHeader className="text-center pb-2 pt-6">
           <div className="mx-auto mb-3 flex items-center justify-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="KeraVokasi"
-              width={42}
-              height={42}
-              className="rounded-full border border-[#4e5058] shadow-md object-cover"
-              priority
-            />
+            <div className="w-11 h-11 rounded-[6px] border border-[#2E2E2F] bg-[#1E1F1F] flex items-center justify-center shadow-md">
+              <Image
+                src="/logo.png"
+                alt="KeraVokasi"
+                width={36}
+                height={36}
+                className="rounded-[4px] object-cover"
+                priority
+              />
+            </div>
             <div className="text-left">
-              <h2 className="text-xl font-bold tracking-tight text-[#f2f3f5]">
+              <h2 className="text-xl font-bold tracking-tight text-[#FFFFFF]">
                 KeraVokasi
               </h2>
-              <p className="text-xs text-[#949ba4]">Asisten AI SMK Malang</p>
+              <p className="text-xs text-[#B3B2B2]">Asisten AI SMK Malang</p>
             </div>
           </div>
-          <CardTitle className="text-base font-semibold text-[#f2f3f5]">
+          <CardTitle className="text-base font-semibold text-[#FFFFFF]">
             Masuk ke Akun Anda
           </CardTitle>
-          <CardDescription className="text-xs text-[#949ba4]">
+          <CardDescription className="text-xs text-[#B3B2B2]">
             Masukkan username dan kata sandi akun Anda untuk mulai chat
           </CardDescription>
         </CardHeader>
@@ -119,7 +117,7 @@ export function LoginForm({
           <form onSubmit={handleLogin} className="space-y-4">
             <FieldGroup className="space-y-3">
               <Field>
-                <FieldLabel htmlFor="username" className="text-xs text-[#dbdee1]">
+                <FieldLabel htmlFor="username" className="text-xs text-[#E0E0E0]">
                   Username
                 </FieldLabel>
                 <Input
@@ -128,14 +126,14 @@ export function LoginForm({
                   placeholder="Contoh: budi_siswa / username Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-[#1e1f22] border-[#383a40] text-sm text-[#f2f3f5] focus:border-[#5865f2] rounded-xl h-10 px-3"
+                  className="bg-[#0A0A0B] border-[#2E2E2F] text-sm text-[#FFFFFF] focus:border-[#FFFFFF] placeholder:text-[#5F5C5D] rounded-[6px] h-10 px-3"
                   required
                 />
               </Field>
 
               <Field>
                 <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="password" className="text-xs text-[#dbdee1]">
+                  <FieldLabel htmlFor="password" className="text-xs text-[#E0E0E0]">
                     Kata Sandi
                   </FieldLabel>
                 </div>
@@ -145,23 +143,23 @@ export function LoginForm({
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#1e1f22] border-[#383a40] text-sm text-[#f2f3f5] focus:border-[#5865f2] rounded-xl h-10 px-3"
+                  className="bg-[#0A0A0B] border-[#2E2E2F] text-sm text-[#FFFFFF] focus:border-[#FFFFFF] placeholder:text-[#5F5C5D] rounded-[6px] h-10 px-3"
                 />
               </Field>
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold rounded-xl h-10 text-xs shadow-md cursor-pointer transition-all mt-2"
+                className="w-full bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] font-semibold rounded-[6px] h-10 text-xs shadow-xs cursor-pointer transition-all mt-2"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-[#0A0A0B]" />
                     Memverifikasi...
                   </>
                 ) : (
                   <>
-                    <LogIn size={16} className="mr-2" />
+                    <LogIn size={16} className="mr-2 text-[#0A0A0B]" />
                     Masuk Sekarang
                   </>
                 )}
@@ -170,19 +168,19 @@ export function LoginForm({
           </form>
 
           {/* Navigation Links */}
-          <div className="mt-5 pt-4 border-t border-[#383a40] flex flex-col gap-2.5 text-center text-xs">
-            <p className="text-[#949ba4]">
+          <div className="mt-5 pt-4 border-t border-[#2E2E2F] flex flex-col gap-2.5 text-center text-xs">
+            <p className="text-[#B3B2B2]">
               Belum memiliki akun?{" "}
               <Link
                 href="/signup"
-                className="text-[#5865f2] hover:underline font-semibold"
+                className="text-[#FFFFFF] hover:underline font-semibold"
               >
                 Daftar Akun Baru
               </Link>
             </p>
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-1.5 text-[#949ba4] hover:text-[#f2f3f5] transition-colors pt-1"
+              className="inline-flex items-center justify-center gap-1.5 text-[#B3B2B2] hover:text-[#FFFFFF] transition-colors pt-1"
             >
               <ArrowLeft size={14} />
               Kembali ke Halaman Utama

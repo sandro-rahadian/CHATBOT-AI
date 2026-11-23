@@ -65,11 +65,11 @@ function TypingIndicator() {
       transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
       className="max-w-[80%] sm:max-w-[70%]"
     >
-      <div className="inline-flex bg-[#2b2d31] border border-[#383a40] rounded-2xl rounded-tl-sm px-4 py-3 items-center gap-1.5 shadow-sm">
+      <div className="inline-flex bg-[#141515] border border-[#2E2E2F] rounded-2xl rounded-tl-sm px-4 py-3 items-center gap-1.5 shadow-sm">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-[#949ba4] animate-bounce"
+            className="w-1.5 h-1.5 rounded-full bg-[#B3B2B2] animate-bounce"
             style={{
               animationDelay: i === 0 ? "-0.3s" : i === 1 ? "-0.15s" : "0s",
               animationDuration: "0.9s",
@@ -81,7 +81,7 @@ function TypingIndicator() {
   );
 }
 
-// ─── ChatBubble (Shadcn Badge for sources) ────────────────────────────────────
+// ─── ChatBubble (Monochrome Shadcn Badges) ───────────────────────────────────
 
 function ChatBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
@@ -99,12 +99,12 @@ function ChatBubble({ message }: { message: Message }) {
         transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
         className="flex flex-col items-end gap-1 max-w-[80%] sm:max-w-[70%] ml-auto"
       >
-        <div className="bg-[#383a40] border border-[#404249] rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
-          <p className="text-sm font-normal text-[#f2f3f5] leading-relaxed tracking-normal whitespace-pre-wrap break-words">
+        <div className="bg-[#1E1F1F] border border-[#2E2E2F] rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
+          <p className="text-sm font-normal text-[#FFFFFF] leading-relaxed tracking-normal whitespace-pre-wrap break-words">
             {message.content}
           </p>
         </div>
-        <span className="text-[10px] text-[#949ba4] font-mono px-1">
+        <span className="text-[10px] text-[#5F5C5D] font-mono px-1">
           {timeStr}
         </span>
       </motion.div>
@@ -120,19 +120,19 @@ function ChatBubble({ message }: { message: Message }) {
       transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
       className="flex flex-col items-start gap-1 max-w-[85%] sm:max-w-[75%]"
     >
-      <div className="flex flex-col gap-2 bg-[#2b2d31] border border-[#383a40] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm w-full">
+      <div className="flex flex-col gap-2 bg-[#141515] border border-[#2E2E2F] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm w-full">
         <TextGenerateEffect
           words={message.content}
           className="font-normal"
-          textClassName="text-sm font-normal text-[#dbdee1] leading-relaxed tracking-normal whitespace-pre-wrap break-words"
+          textClassName="text-sm font-normal text-[#E0E0E0] leading-relaxed tracking-normal whitespace-pre-wrap break-words"
           duration={0.35}
         />
 
-        {/* Sumber Basis Pengetahuan Terverifikasi (Shadcn Badge) */}
+        {/* Sumber Basis Pengetahuan Terverifikasi (Monochrome Badge) */}
         {hasSources && (
-          <div className="mt-2 pt-2.5 border-t border-[#383a40]/70 flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1.5">
-              <BookOpen size={14} className="text-[#5865f2]" />
+          <div className="mt-2 pt-2.5 border-t border-[#2E2E2F] flex flex-col gap-1.5">
+            <span className="text-[11px] font-medium text-[#B3B2B2] flex items-center gap-1.5">
+              <BookOpen size={14} className="text-[#FFFFFF]" />
               Sumber Informasi Terverifikasi:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -140,14 +140,14 @@ function ChatBubble({ message }: { message: Message }) {
                 <Badge
                   key={idx}
                   variant="outline"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1e1f22]/90 border-[#3f4147] text-[11px] text-[#dbdee1] shadow-xs font-normal"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-[#1E1F1F] border-[#2E2E2F] text-[11px] text-[#D1D1D1] shadow-xs font-normal"
                   title={s.title}
                 >
-                  <span className="font-semibold text-[#5865f2]">
+                  <span className="font-semibold text-[#FFFFFF]">
                     {s.school}
                   </span>
-                  <span className="text-[#4e5058]">•</span>
-                  <span className="text-[#949ba4]">{s.category}</span>
+                  <span className="text-[#3F3F3F]">•</span>
+                  <span className="text-[#B3B2B2]">{s.category}</span>
                 </Badge>
               ))}
             </div>
@@ -156,14 +156,14 @@ function ChatBubble({ message }: { message: Message }) {
 
         <div className="flex items-center justify-between pt-1">
           {message.userRole && (
-            <span className="text-[10px] text-[#949ba4]">
+            <span className="text-[10px] text-[#5F5C5D]">
               Respons mode:{" "}
-              <span className="font-semibold text-[#dbdee1]">
+              <span className="font-semibold text-[#E0E0E0]">
                 {message.userRole}
               </span>
             </span>
           )}
-          <span className="text-[10px] text-[#949ba4] font-mono ml-auto">
+          <span className="text-[10px] text-[#5F5C5D] font-mono ml-auto">
             {timeStr}
           </span>
         </div>
@@ -388,7 +388,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="relative flex flex-col h-screen bg-[#313338] text-[#dbdee1] overflow-hidden">
+    <div className="relative flex flex-col h-screen bg-[#0A0A0B] text-[#FFFFFF] overflow-hidden">
       {/* ── Framer Sidebar Dock Menu ── */}
       <SidebarDockMenu
         currentUser={currentUser}
@@ -398,15 +398,15 @@ export default function ChatPage() {
 
       {/* ── Login Required Dialog ── */}
       <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
-        <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
+        <DialogContent className="border border-[#2E2E2F] bg-[#141515] text-[#FFFFFF] shadow-2xl sm:max-w-md p-6 rounded-[10px]">
           <DialogHeader>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-2">
-              <Lock size={20} />
+            <div className="w-10 h-10 rounded-[6px] bg-[#1E1F1F] border border-[#2E2E2F] flex items-center justify-center text-[#FFFFFF] mb-2">
+              <Lock size={18} />
             </div>
-            <DialogTitle className="text-lg font-semibold text-[#f2f3f5] tracking-tight">
+            <DialogTitle className="text-base font-semibold text-[#FFFFFF] tracking-tight">
               Masuk untuk Memulai Chat
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#949ba4] mt-1 leading-relaxed">
+            <DialogDescription className="text-xs text-[#B3B2B2] mt-1 leading-relaxed">
               Anda saat ini berada dalam mode Tamu. Untuk menjaga batas kuota dan
               hak akses informasi sekolah, silakan login dengan akun Anda atau buat
               akun baru.
@@ -416,7 +416,7 @@ export default function ChatPage() {
             <Link href="/signup" className="w-full sm:w-auto">
               <Button
                 variant="outline"
-                className="w-full bg-[#1e1f22] border-[#383a40] text-[#dbdee1] hover:text-white rounded-xl text-xs font-medium cursor-pointer"
+                className="w-full bg-[#1E1F1F] hover:bg-[#2E2E2F] border-[#2E2E2F] text-[#FFFFFF] rounded-[6px] text-xs font-medium cursor-pointer"
               >
                 <UserPlus size={14} className="mr-1.5" />
                 Daftar Akun
@@ -424,9 +424,9 @@ export default function ChatPage() {
             </Link>
             <Link href="/login" className="w-full sm:w-auto">
               <Button
-                className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer"
+                className="w-full bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] rounded-[6px] text-xs font-semibold shadow-xs cursor-pointer"
               >
-                <LogIn size={14} className="mr-1.5" />
+                <LogIn size={14} className="mr-1.5 text-[#0A0A0B]" />
                 Masuk Sekarang
               </Button>
             </Link>
@@ -436,12 +436,12 @@ export default function ChatPage() {
 
       {/* ── Dialog Confirmation for Clearing Conversation ── */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
+        <DialogContent className="border border-[#2E2E2F] bg-[#141515] text-[#FFFFFF] shadow-2xl sm:max-w-md p-6 rounded-[10px]">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-[#f2f3f5] tracking-tight">
+            <DialogTitle className="text-base font-semibold text-[#FFFFFF] tracking-tight">
               Hapus Percakapan
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#949ba4] mt-1">
+            <DialogDescription className="text-xs text-[#B3B2B2] mt-1">
               Tindakan ini tidak dapat dibatalkan. Semua pesan dalam percakapan ini
               akan dibersihkan secara permanen dari layar sesi Anda.
             </DialogDescription>
@@ -449,14 +449,13 @@ export default function ChatPage() {
           <DialogFooter className="mt-4 flex justify-end gap-2.5">
             <Button
               variant="secondary"
-              className="bg-[#383a40] hover:bg-[#404249] text-[#dbdee1] rounded-xl text-xs font-medium cursor-pointer"
+              className="bg-[#1E1F1F] hover:bg-[#2E2E2F] border border-[#2E2E2F] text-[#FFFFFF] rounded-[6px] text-xs font-medium cursor-pointer"
               onClick={() => setShowConfirm(false)}
             >
               Batal
             </Button>
             <Button
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-medium shadow-md cursor-pointer"
+              className="bg-[#2E2E2F] hover:bg-[#3F3F3F] border border-[#3F3F3F] text-[#FFFFFF] rounded-[6px] text-xs font-medium shadow-xs cursor-pointer"
               onClick={handleClearConfirm}
             >
               Hapus
@@ -473,20 +472,20 @@ export default function ChatPage() {
             {messages.length === 0 ? (
               /* Welcome Card for Empty State */
               <div className="flex flex-col items-center justify-center text-center py-12 px-4 max-w-md mx-auto my-auto">
-                <div className="w-16 h-16 rounded-2xl bg-[#2b2d31] border border-white/10 flex items-center justify-center shadow-lg mb-4">
+                <div className="w-14 h-14 rounded-[8px] bg-[#1E1F1F] border border-[#2E2E2F] flex items-center justify-center shadow-lg mb-4">
                   <Image
                     src="/logo.png"
                     alt="KeraVokasi"
-                    width={48}
-                    height={48}
-                    className="rounded-xl object-cover"
+                    width={40}
+                    height={40}
+                    className="rounded-[6px] object-cover"
                     priority
                   />
                 </div>
-                <h2 className="text-lg font-bold text-[#f2f3f5] tracking-tight">
+                <h2 className="text-lg font-bold text-[#FFFFFF] tracking-tight">
                   KeraVokasi AI Chatbot
                 </h2>
-                <p className="text-xs text-[#949ba4] mt-1.5 mb-5 leading-relaxed">
+                <p className="text-xs text-[#B3B2B2] mt-1.5 mb-5 leading-relaxed">
                   Asisten resmi seputar sekolah kejuruan (SMK) di Malang. Dapatkan
                   informasi jurusan, pendaftaran PPDB, kurikulum, dan fasilitas
                   sekolah.
@@ -495,17 +494,17 @@ export default function ChatPage() {
                 {!isLoggedIn && (
                   <div className="flex items-center gap-2.5 w-full justify-center">
                     <Link href="/login">
-                      <Button className="bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold px-4 h-9 shadow-md cursor-pointer">
-                        <LogIn size={14} className="mr-1.5" />
+                      <Button className="bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] rounded-[6px] text-xs font-semibold px-4 h-9 shadow-xs cursor-pointer">
+                        <LogIn size={14} className="mr-1.5 text-[#0A0A0B]" />
                         Masuk ke Akun
                       </Button>
                     </Link>
                     <Link href="/signup">
                       <Button
                         variant="outline"
-                        className="bg-[#1e1f22] border-[#383a40] text-[#dbdee1] hover:text-white rounded-xl text-xs font-medium px-4 h-9 cursor-pointer"
+                        className="bg-[#1E1F1F] hover:bg-[#2E2E2F] border-[#2E2E2F] text-[#FFFFFF] rounded-[6px] text-xs font-medium px-4 h-9 cursor-pointer"
                       >
-                        <UserPlus size={14} className="mr-1.5" />
+                        <UserPlus size={14} className="mr-1.5 text-[#FFFFFF]" />
                         Daftar Baru
                       </Button>
                     </Link>
@@ -533,7 +532,7 @@ export default function ChatPage() {
             className="absolute top-0 inset-x-0 h-px"
             style={{
               background:
-                "linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)",
+                "linear-gradient(to right, transparent, #2E2E2F, transparent)",
             }}
           />
 
@@ -552,10 +551,10 @@ export default function ChatPage() {
               /* Locked Input Bar for Guest */
               <div
                 onClick={() => setShowLoginPrompt(true)}
-                className="w-full bg-[#2b2d31] hover:bg-[#32353b] border border-[#3f4147] rounded-full p-2.5 px-4 flex items-center justify-between cursor-pointer transition-all shadow-md group"
+                className="w-full bg-[#1E1F1F] hover:bg-[#252627] border border-[#2E2E2F] hover:border-[#3F3F3F] rounded-full p-2.5 px-4 flex items-center justify-between cursor-pointer transition-all shadow-md group"
               >
-                <div className="flex items-center gap-2 text-xs text-[#949ba4] group-hover:text-[#dbdee1]">
-                  <Lock size={15} className="text-amber-400" />
+                <div className="flex items-center gap-2.5 text-xs text-[#B3B2B2] group-hover:text-[#FFFFFF]">
+                  <Lock size={15} className="text-[#FFFFFF]" />
                   <span>
                     Anda harus login terlebih dahulu untuk mengirim pesan...
                   </span>
@@ -564,7 +563,7 @@ export default function ChatPage() {
                   <Link
                     href="/login"
                     onClick={(e) => e.stopPropagation()}
-                    className="text-xs font-semibold text-white bg-[#5865f2] hover:bg-[#4752c4] px-3 py-1 rounded-full shadow-xs"
+                    className="text-xs font-semibold text-[#0A0A0B] bg-[#FFFFFF] hover:bg-[#F0F0F0] px-3.5 py-1 rounded-full shadow-xs transition-colors"
                   >
                     Masuk
                   </Link>
@@ -581,7 +580,7 @@ export default function ChatPage() {
                   exit={{ opacity: 0, y: -4 }}
                   className="flex items-center justify-center gap-1.5 mt-2"
                 >
-                  <p className="text-center text-xs text-red-400 font-medium">
+                  <p className="text-center text-xs text-[#E0E0E0] bg-[#1E1F1F] border border-[#2E2E2F] px-3 py-1 rounded-[6px] font-medium">
                     {error}
                   </p>
                 </motion.div>

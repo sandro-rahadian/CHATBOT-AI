@@ -45,7 +45,7 @@ export const MenuItem = ({
               <motion.div
                 transition={transition}
                 layoutId="active"
-                className="bg-[#1e1f22]/95 backdrop-blur-xl rounded-2xl overflow-hidden border border-[#3f4147] shadow-2xl shadow-black/80"
+                className="bg-[#1E1F1F]/95 backdrop-blur-xl rounded-2xl overflow-hidden border border-[#2E2E2F] shadow-2xl shadow-black/80"
               >
                 <motion.div layout className="w-max max-w-sm sm:max-w-md h-full p-4">
                   {children}
@@ -72,7 +72,7 @@ export const Menu = ({
     <nav
       onMouseLeave={() => setActive(null)}
       className={cn(
-        "relative rounded-full border border-[#3f4147]/80 bg-[#1e1f22]/85 backdrop-blur-xl shadow-lg shadow-black/50 flex items-center justify-between px-6 py-2.5",
+        "relative rounded-full border border-[#2E2E2F] bg-[#1E1F1F]/85 backdrop-blur-xl shadow-lg shadow-black/50 flex items-center justify-between px-6 py-2.5",
         className
       )}
     >

@@ -189,8 +189,8 @@ export function PlaceholdersAndVanishInput({
   return (
     <form
       className={cn(
-        "w-full relative max-w-xl mx-auto bg-white dark:bg-zinc-800 h-12 rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
-        value && "bg-gray-50"
+        "w-full relative max-w-2xl mx-auto bg-[#1E1F1F] border border-[#2E2E2F] hover:border-[#3F3F3F] focus-within:border-[#FFFFFF]/30 h-12 rounded-full overflow-hidden shadow-lg shadow-black/40 transition duration-200",
+        value && "border-[#3F3F3F]"
       )}
       onSubmit={handleSubmit}
     >
@@ -220,8 +220,8 @@ export function PlaceholdersAndVanishInput({
         data-gramm_editor="false"
         data-enable-grammarly="false"
         className={cn(
-          "w-full relative text-sm sm:text-base z-40 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-32 sm:pr-36",
-          animating && "text-transparent dark:text-transparent selection:bg-transparent"
+          "w-full relative text-sm sm:text-base z-40 border-none text-[#FFFFFF] bg-transparent h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-8 pr-32 sm:pr-36",
+          animating && "text-transparent selection:bg-transparent"
         )}
       />
 
@@ -229,9 +229,9 @@ export function PlaceholdersAndVanishInput({
         ref={btnRef}
         disabled={!value || animating}
         type="submit"
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[110px] h-9 px-3.5 sm:px-4 rounded-full bg-[#383a40] hover:bg-[#404249] active:bg-[#313338] text-[#dbdee1] hover:text-white border border-[#4e5058] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 z-50 min-w-0 sm:min-w-[100px] h-9 px-3.5 sm:px-4 rounded-full bg-[#FFFFFF] hover:bg-[#F0F0F0] active:bg-[#E0E0E0] text-[#0A0A0B] font-semibold border-none shadow-sm disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none transition-all duration-200 cursor-pointer"
       >
-        <span className="text-xs font-medium tracking-tight">Send message</span>
+        <span className="text-xs font-semibold tracking-tight">Kirim</span>
       </Button>
 
       <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
@@ -255,7 +255,7 @@ export function PlaceholdersAndVanishInput({
                 duration: 0.3,
                 ease: "linear",
               }}
-              className="dark:text-zinc-500 text-sm sm:text-base font-normal text-neutral-500 pl-4 sm:pl-12 text-left w-[calc(100%-8.5rem)] truncate"
+              className="text-xs sm:text-sm font-normal text-[#5F5C5D] pl-4 sm:pl-8 text-left w-[calc(100%-8.5rem)] truncate"
             >
               {placeholders[currentPlaceholder]}
             </motion.p>

@@ -14,10 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
-  Lock,
 } from "@/components/ui/icons";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -54,28 +52,28 @@ function getRoleBadgeStyle(role: string) {
   switch (role) {
     case "admin":
       return {
-        bg: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+        bg: "bg-[#FFFFFF] text-[#0A0A0B] border-transparent font-semibold shadow-xs",
         label: "Admin",
-        ring: "ring-purple-500/50",
+        ring: "ring-1 ring-[#FFFFFF]/50",
       };
     case "guru":
       return {
-        bg: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+        bg: "bg-[#2E2E2F] text-[#FFFFFF] border-[#3F3F3F] font-medium",
         label: "Guru",
-        ring: "ring-emerald-500/50",
+        ring: "ring-1 ring-[#FFFFFF]/30",
       };
     case "siswa":
       return {
-        bg: "bg-sky-500/15 text-sky-300 border-sky-500/40",
+        bg: "bg-[#1E1F1F] text-[#E0E0E0] border-[#2E2E2F] font-normal",
         label: "Siswa",
-        ring: "ring-sky-500/50",
+        ring: "ring-1 ring-[#3F3F3F]",
       };
     case "guest":
     default:
       return {
-        bg: "bg-zinc-700/50 text-zinc-300 border-zinc-600",
+        bg: "bg-transparent text-[#B3B2B2] border-[#2E2E2F] font-normal",
         label: "Tamu",
-        ring: "ring-zinc-600/50",
+        ring: "ring-1 ring-[#2E2E2F]",
       };
   }
 }
@@ -115,7 +113,7 @@ export function SidebarDockMenu({
           stiffness: 400,
           damping: 32,
         }}
-        className="relative bg-[#23252a]/95 backdrop-blur-xl border border-white/10 rounded-[24px] shadow-2xl shadow-black/70 overflow-hidden flex flex-col justify-between text-[#dbdee1] transition-colors p-3"
+        className="relative bg-[#0A0A0B]/95 backdrop-blur-xl border border-[#2E2E2F] rounded-2xl shadow-2xl shadow-black/80 overflow-hidden flex flex-col justify-between text-[#FFFFFF] transition-colors p-3"
         style={{
           maxHeight: "calc(100vh - 40px)",
         }}
@@ -127,7 +125,7 @@ export function SidebarDockMenu({
               href="/"
               className="flex items-center gap-2.5 overflow-hidden group select-none"
             >
-              <div className="relative shrink-0 w-9 h-9 rounded-xl overflow-hidden border border-white/10 shadow-sm flex items-center justify-center bg-[#2b2d31]">
+              <div className="relative shrink-0 w-9 h-9 rounded-[6px] overflow-hidden border border-[#2E2E2F] shadow-sm flex items-center justify-center bg-[#1E1F1F]">
                 <Image
                   src="/logo.png"
                   alt="KeraVokasi"
@@ -147,10 +145,10 @@ export function SidebarDockMenu({
                     transition={{ duration: 0.15 }}
                     className="flex flex-col whitespace-nowrap"
                   >
-                    <span className="text-xs font-bold text-[#f2f3f5] tracking-wide group-hover:text-white transition-colors">
+                    <span className="text-xs font-bold text-[#FFFFFF] tracking-wide group-hover:text-[#F0F0F0] transition-colors">
                       KeraVokasi
                     </span>
-                    <span className="text-[10px] text-[#949ba4] font-medium">
+                    <span className="text-[10px] text-[#B3B2B2] font-medium">
                       Asisten AI SMK Malang
                     </span>
                   </motion.div>
@@ -165,7 +163,7 @@ export function SidebarDockMenu({
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-[#949ba4] hover:text-[#f2f3f5] transition-colors cursor-pointer shrink-0"
+                    className="w-7 h-7 rounded-[6px] hover:bg-[#1E1F1F] flex items-center justify-center text-[#B3B2B2] hover:text-[#FFFFFF] transition-colors cursor-pointer shrink-0 border border-transparent hover:border-[#2E2E2F]"
                   >
                     <ChevronLeft size={16} />
                   </button>
@@ -175,7 +173,7 @@ export function SidebarDockMenu({
             )}
           </div>
 
-          <div className="h-px bg-white/5 w-full my-0.5" />
+          <div className="h-px bg-[#2E2E2F] w-full my-0.5" />
 
           {/* ── User Profile & Quota Section ─────────────────────────────────── */}
           <div className="flex flex-col gap-2">
@@ -187,10 +185,10 @@ export function SidebarDockMenu({
                     <button
                       type="button"
                       onClick={() => setIsOpen(true)}
-                      className="w-10 h-10 rounded-xl bg-[#1e1f22] border border-white/10 flex items-center justify-center relative cursor-pointer hover:border-white/20 transition-all"
+                      className="w-10 h-10 rounded-[6px] bg-[#1E1F1F] border border-[#2E2E2F] flex items-center justify-center relative cursor-pointer hover:border-[#3F3F3F] hover:bg-[#2E2E2F] transition-all"
                     >
-                      <Avatar className={`w-7 h-7 ring-2 ${badge.ring}`}>
-                        <AvatarFallback className="bg-[#2b2d31] text-[10px] text-[#dbdee1] font-semibold">
+                      <Avatar className={`w-7 h-7 ${badge.ring}`}>
+                        <AvatarFallback className="bg-[#141515] text-[10px] text-[#FFFFFF] font-semibold">
                           {isLoggedIn ? (
                             currentUser?.username.slice(0, 2).toUpperCase()
                           ) : (
@@ -199,7 +197,7 @@ export function SidebarDockMenu({
                         </AvatarFallback>
                       </Avatar>
                       {isLoggedIn && (
-                        <span className="absolute -bottom-1 -right-1 bg-amber-400 text-black text-[9px] font-mono font-bold px-1 rounded-full shadow-xs">
+                        <span className="absolute -bottom-1 -right-1 bg-[#FFFFFF] text-[#0A0A0B] text-[8px] font-mono font-bold px-1 rounded-[4px] border border-[#2E2E2F] shadow-xs">
                           {quotaDisplay}
                         </span>
                       )}
@@ -207,17 +205,17 @@ export function SidebarDockMenu({
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-xs">
+                      <span className="font-semibold text-xs text-[#FFFFFF]">
                         {isLoggedIn
                           ? `${currentUser?.username} (${badge.label})`
                           : "Mode Tamu (Belum Login)"}
                       </span>
                       {isLoggedIn ? (
-                        <span className="text-[10px] text-amber-300 font-mono">
+                        <span className="text-[10px] text-[#E0E0E0] font-mono">
                           Sisa Kuota: {quotaDisplay}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-red-300">
+                        <span className="text-[10px] text-[#B3B2B2]">
                           Harap login untuk mengirim pesan
                         </span>
                       )}
@@ -227,19 +225,19 @@ export function SidebarDockMenu({
               </div>
             ) : (
               /* Expanded Mode */
-              <div className="bg-[#1e1f22]/90 border border-white/10 rounded-2xl p-3 flex flex-col gap-2.5 shadow-sm">
+              <div className="bg-[#141515] border border-[#2E2E2F] rounded-[8px] p-3 flex flex-col gap-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <Avatar className={`w-8 h-8 shrink-0 ring-2 ${badge.ring}`}>
-                      <AvatarFallback className="bg-[#2b2d31] text-xs text-[#dbdee1] font-semibold">
+                    <Avatar className={`w-8 h-8 shrink-0 ${badge.ring}`}>
+                      <AvatarFallback className="bg-[#1E1F1F] text-xs text-[#FFFFFF] font-semibold">
                         <UserIcon size={16} />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-semibold text-[#f2f3f5] truncate">
+                      <span className="text-xs font-semibold text-[#FFFFFF] truncate">
                         {isLoggedIn ? currentUser?.username : "Tamu (Guest)"}
                       </span>
-                      <span className="text-[10px] text-[#949ba4] truncate">
+                      <span className="text-[10px] text-[#B3B2B2] truncate">
                         {isLoggedIn
                           ? role === "admin"
                             ? "Administrator"
@@ -252,7 +250,7 @@ export function SidebarDockMenu({
                   </div>
                   <Badge
                     variant="outline"
-                    className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${badge.bg}`}
+                    className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-[4px] border shrink-0 ${badge.bg}`}
                   >
                     {badge.label}
                   </Badge>
@@ -260,12 +258,12 @@ export function SidebarDockMenu({
 
                 {isLoggedIn ? (
                   /* Logged-in Quota Bar */
-                  <div className="flex items-center justify-between bg-[#2b2d31] px-2.5 py-1.5 rounded-xl border border-white/5 text-[11px]">
-                    <span className="text-[#949ba4] flex items-center gap-1.5">
-                      <Zap size={14} className="text-amber-400" />
+                  <div className="flex items-center justify-between bg-[#1E1F1F] px-2.5 py-1.5 rounded-[6px] border border-[#2E2E2F] text-[11px]">
+                    <span className="text-[#B3B2B2] flex items-center gap-1.5">
+                      <Zap size={14} className="text-[#FFFFFF]" />
                       Sisa Kuota:
                     </span>
-                    <span className="font-mono font-semibold text-amber-400">
+                    <span className="font-mono font-semibold text-[#FFFFFF]">
                       {role === "admin"
                         ? "Tanpa Batas (∞)"
                         : `${currentUser?.remainingQuota ?? 0}/${
@@ -275,11 +273,11 @@ export function SidebarDockMenu({
                   </div>
                 ) : (
                   /* Guest Notice Banner */
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2 text-center flex flex-col gap-1">
-                    <span className="text-[10px] text-amber-300 font-medium">
+                  <div className="bg-[#1E1F1F] border border-[#2E2E2F] rounded-[6px] p-2 text-center flex flex-col gap-1">
+                    <span className="text-[10px] text-[#FFFFFF] font-medium">
                       🔒 Anda belum login
                     </span>
-                    <p className="text-[9px] text-[#949ba4]">
+                    <p className="text-[9px] text-[#B3B2B2]">
                       Login untuk mulai chat dengan chatbot
                     </p>
                   </div>
@@ -288,7 +286,7 @@ export function SidebarDockMenu({
             )}
           </div>
 
-          <div className="h-px bg-white/5 w-full my-0.5" />
+          <div className="h-px bg-[#2E2E2F] w-full my-0.5" />
 
           {/* ── Navigation Menu Items ────────────────────────────────────────── */}
           <nav className="flex flex-col gap-1.5">
@@ -297,11 +295,11 @@ export function SidebarDockMenu({
               <TooltipTrigger asChild>
                 <Link
                   href="/"
-                  className={`flex items-center gap-3 p-2 rounded-xl bg-[#5865f2]/15 text-white border border-[#5865f2]/30 transition-all select-none ${
+                  className={`group flex items-center gap-3 p-2 rounded-[6px] bg-[#1E1F1F] text-[#FFFFFF] border border-[#2E2E2F] hover:bg-[#2E2E2F] transition-all select-none ${
                     !isOpen ? "justify-center" : ""
                   }`}
                 >
-                  <Message size={16} className="text-[#5865f2] shrink-0" />
+                  <Message size={16} className="text-[#FFFFFF] shrink-0" />
                   {isOpen && (
                     <span className="text-xs font-medium truncate flex-1">
                       Obrolan Chat
@@ -318,11 +316,11 @@ export function SidebarDockMenu({
                 <button
                   type="button"
                   onClick={onClear}
-                  className={`flex items-center gap-3 p-2 rounded-xl hover:bg-red-500/15 text-[#949ba4] hover:text-red-300 transition-all cursor-pointer text-left ${
+                  className={`group flex items-center gap-3 p-2 rounded-[6px] hover:bg-[#1E1F1F] border border-transparent hover:border-[#2E2E2F] text-[#B3B2B2] hover:text-[#FFFFFF] transition-all cursor-pointer text-left ${
                     !isOpen ? "justify-center" : ""
                   }`}
                 >
-                  <Trash size={16} className="text-red-400 shrink-0" />
+                  <Trash size={16} className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors" />
                   {isOpen && (
                     <span className="text-xs font-medium truncate">
                       Hapus Percakapan
@@ -338,7 +336,7 @@ export function SidebarDockMenu({
         </div>
 
         {/* ── Bottom Section: Auth Links / Logout ───────────────────────────── */}
-        <div className="flex flex-col gap-1.5 pt-3 border-t border-white/5 mt-3">
+        <div className="flex flex-col gap-1.5 pt-3 border-t border-[#2E2E2F] mt-3">
           {isLoggedIn ? (
             /* Logged In: Logout Button */
             <Tooltip>
@@ -346,11 +344,11 @@ export function SidebarDockMenu({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className={`flex items-center gap-3 p-2 rounded-xl hover:bg-red-500/15 text-[#949ba4] hover:text-red-300 transition-all text-xs font-medium cursor-pointer text-left ${
+                  className={`group flex items-center gap-3 p-2 rounded-[6px] hover:bg-[#1E1F1F] border border-transparent hover:border-[#2E2E2F] text-[#B3B2B2] hover:text-[#FFFFFF] transition-all text-xs font-medium cursor-pointer text-left ${
                     !isOpen ? "justify-center" : ""
                   }`}
                 >
-                  <LogOut size={16} className="text-red-400 shrink-0" />
+                  <LogOut size={16} className="text-[#B3B2B2] group-hover:text-[#FFFFFF] shrink-0 transition-colors" />
                   {isOpen && <span className="truncate">Keluar (Logout)</span>}
                 </button>
               </TooltipTrigger>
@@ -363,12 +361,12 @@ export function SidebarDockMenu({
                 <TooltipTrigger asChild>
                   <Link
                     href="/login"
-                    className={`flex items-center gap-3 p-2 rounded-xl bg-[#5865f2] hover:bg-[#4752c4] text-white transition-all text-xs font-semibold shadow-md ${
+                    className={`flex items-center gap-3 p-2 rounded-[6px] bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#0A0A0B] transition-all text-xs font-semibold shadow-xs ${
                       !isOpen ? "justify-center" : ""
                     }`}
                   >
-                    <LogIn size={16} className="shrink-0" />
-                    {isOpen && <span className="truncate">Masuk (Login)</span>}
+                    <LogIn size={16} className="text-[#0A0A0B] shrink-0" />
+                    {isOpen && <span className="truncate font-semibold">Masuk (Login)</span>}
                   </Link>
                 </TooltipTrigger>
                 {!isOpen && <TooltipContent side="right">Masuk (Login)</TooltipContent>}
@@ -378,11 +376,11 @@ export function SidebarDockMenu({
                 <TooltipTrigger asChild>
                   <Link
                     href="/signup"
-                    className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 text-[#dbdee1] hover:text-white transition-all text-xs font-medium ${
+                    className={`flex items-center gap-3 p-2 rounded-[6px] bg-[#1E1F1F] hover:bg-[#2E2E2F] border border-[#2E2E2F] hover:border-[#3F3F3F] text-[#FFFFFF] transition-all text-xs font-medium ${
                       !isOpen ? "justify-center" : ""
                     }`}
                   >
-                    <UserPlus size={16} className="text-emerald-400 shrink-0" />
+                    <UserPlus size={16} className="text-[#FFFFFF] shrink-0" />
                     {isOpen && <span className="truncate">Daftar Akun</span>}
                   </Link>
                 </TooltipTrigger>
@@ -398,7 +396,7 @@ export function SidebarDockMenu({
                 <button
                   type="button"
                   onClick={() => setIsOpen(true)}
-                  className="w-10 h-7 mx-auto rounded-lg hover:bg-white/10 flex items-center justify-center text-[#949ba4] hover:text-white transition-colors cursor-pointer mt-1"
+                  className="w-10 h-7 mx-auto rounded-[6px] hover:bg-[#1E1F1F] border border-transparent hover:border-[#2E2E2F] flex items-center justify-center text-[#B3B2B2] hover:text-[#FFFFFF] transition-colors cursor-pointer mt-1"
                 >
                   <ChevronRight size={16} />
                 </button>

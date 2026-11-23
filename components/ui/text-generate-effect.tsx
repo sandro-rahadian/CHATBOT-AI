@@ -137,21 +137,14 @@ export const TextGenerateEffect = ({
                   href={href}
                   target={isTel ? undefined : "_blank"}
                   rel={isTel ? undefined : "noopener noreferrer"}
-                  className={cn(
-                    "inline-flex items-center gap-1 font-medium underline underline-offset-2 transition-colors cursor-pointer break-all",
-                    isWa
-                      ? "text-emerald-400 hover:text-emerald-300 decoration-emerald-500/50 hover:decoration-emerald-400"
-                      : isTel
-                      ? "text-amber-400 hover:text-amber-300 decoration-amber-500/50 hover:decoration-amber-400"
-                      : "text-[#00a8fc] hover:text-[#58bbf8] decoration-[#00a8fc]/50 hover:decoration-[#58bbf8]"
-                  )}
+                  className="inline-flex items-center gap-1 font-medium text-[#FFFFFF] hover:text-[#E0E0E0] underline underline-offset-4 decoration-[#5F5C5D] hover:decoration-[#FFFFFF] transition-colors cursor-pointer break-all"
                 >
                   {children}
                 </a>
               );
             },
             code: ({ children }) => (
-              <code className="font-mono text-xs bg-[#1e1f22] text-[#f2f3f5] px-1.5 py-0.5 rounded border border-[#383a40]">
+              <code className="font-mono text-xs bg-[#1E1F1F] text-[#FFFFFF] px-1.5 py-0.5 rounded-[4px] border border-[#2E2E2F]">
                 {children}
               </code>
             ),
