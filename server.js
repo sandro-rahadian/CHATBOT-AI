@@ -1029,6 +1029,89 @@ export function createApp({
     }
   });
 
+  // POST /register - Registrasi akun pengguna baru
+  app.post("/register", async (req, res) => {
+    const { username, role = "siswa", school_id = null } = req.body ?? {};
+    if (!username || typeof username !== "string" || username.trim() === "") {
+      return res.status(400).json({ error: "Username wajib diisi." });
+    }
+
+    const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, "_");
+    const chosenRole = ["siswa", "guru"].includes(role) ? role : "siswa";
+    const apiToken = `token-${cleanUsername}-${Date.now().toString().slice(-4)}`;
+
+    const pool = getDbPool();
+    if (!pool) {
+      return res.status(201).json({
+        message: "Registrasi berhasil",
+        token: apiToken,
+        user: {
+          username: cleanUsername,
+          role: chosenRole,
+          schoolId: school_id,
+          allowedCategories:
+            chosenRole === "guru"
+              ? ["Profil", "Alamat & Kontak", "Pendaftaran", "Jurusan", "Fasilitas", "Kegiatan", "Hasil riset web"]
+              : ["Alamat & Kontak", "Pendaftaran", "Jurusan", "Fasilitas"],
+          dailyLimit: chosenRole === "guru" ? 200 : 50,
+          remainingQuota: chosenRole === "guru" ? 200 : 50,
+        },
+      });
+    }
+
+    try {
+      const [existing] = await pool.query(
+        "SELECT id FROM users WHERE username = ? LIMIT 1",
+        [cleanUsername]
+      );
+      if (Array.isArray(existing) && existing.length > 0) {
+        return res.status(400).json({ error: "Username sudah digunakan. Silakan pilih username lain." });
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      await pool.query(
+        "INSERT INTO users (username, api_token, role, school_id, daily_count, last_reset) VALUES (?, ?, ?, ?, 0, ?)",
+        [cleanUsername, apiToken, chosenRole, school_id || null, today]
+      );
+
+      const [rolePerms] = await pool.query(
+        "SELECT * FROM role_permissions WHERE role = ? LIMIT 1",
+        [chosenRole]
+      );
+      const roleRow = Array.isArray(rolePerms) && rolePerms.length > 0 ? rolePerms[0] : null;
+
+      let allowedCategories = ["*"];
+      try {
+        if (roleRow && roleRow.allowed_categories) {
+          allowedCategories =
+            typeof roleRow.allowed_categories === "string"
+              ? JSON.parse(roleRow.allowed_categories)
+              : roleRow.allowed_categories;
+        }
+      } catch {
+        allowedCategories = ["*"];
+      }
+
+      const dailyLimit = roleRow?.daily_limit ?? (chosenRole === "guru" ? 200 : 50);
+
+      return res.status(201).json({
+        message: "Registrasi berhasil",
+        token: apiToken,
+        user: {
+          username: cleanUsername,
+          role: chosenRole,
+          schoolId: school_id,
+          allowedCategories,
+          dailyLimit,
+          remainingQuota: dailyLimit,
+        },
+      });
+    } catch (err) {
+      console.error("[POST /register] Error:", err?.message ?? err);
+      return res.status(500).json({ error: "Terjadi kesalahan pada server saat pendaftaran." });
+    }
+  });
+
   // GET /me - Cek profil dan sisa kuota pengguna saat ini
   app.get("/me", async (req, res) => {
     const token = req.headers["x-api-token"];

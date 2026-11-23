@@ -498,3 +498,25 @@ test("POST /chat: penolakan token tidak valid (401)", async () => {
   assert.ok((await res.json()).error.includes("Token tidak valid"));
 });
 
+test("POST /register: validasi dan pendaftaran sukses", async () => {
+  // 1. Username kosong -> 400
+  const resEmpty = await fetch(`${base}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(resEmpty.status, 400);
+
+  // 2. Sukses daftar user baru
+  const resSuccess = await fetch(`${base}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "siswa_baru_keren", role: "siswa" }),
+  });
+  assert.equal(resSuccess.status, 201);
+  const data = await resSuccess.json();
+  assert.equal(data.user.username, "siswa_baru_keren");
+  assert.equal(data.user.role, "siswa");
+  assert.ok(data.token.startsWith("token-"));
+});
+
