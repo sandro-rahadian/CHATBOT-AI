@@ -10,20 +10,35 @@ import {
   ChevronDown,
   LogOut,
   Check,
-  Database,
-  Sparkles,
   BookOpen,
 } from "lucide-react";
+import { toast } from "sonner";
+
+// ─── Shadcn UI Components ─────────────────────────────────────────────────────
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+// ─── Local UI Elements ────────────────────────────────────────────────────────
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
-import {
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-} from "@/components/ui/animated-modal";
-import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
-import { ToastStack, useToastStack } from "@/components/toast-stack/toast-stack";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,16 +170,17 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
                   KeraVokasi
                 </span>
               </div>
-              <HoverBorderGradient
-                containerClassName="rounded-full"
-                className="bg-[#1e1f22] hover:bg-red-500/20 text-[#dbdee1] hover:text-red-300 text-xs px-3.5 py-1 font-medium transition-colors"
+              <Button
+                variant="destructive"
+                size="xs"
+                className="rounded-full bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-xs px-3 py-1 font-medium h-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   onClear();
                 }}
               >
                 Hapus
-              </HoverBorderGradient>
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -173,7 +189,7 @@ function DynamicIslandNav({ onClear }: { onClear: () => void }) {
   );
 }
 
-// ─── AccountSwitcher ──────────────────────────────────────────────────────────
+// ─── AccountSwitcher (Shadcn DropdownMenu & Badge) ────────────────────────────
 
 interface AccountSwitcherProps {
   currentUser: UserProfile | null;
@@ -186,25 +202,8 @@ function AccountSwitcher({
   demoUsers,
   onSwitchUser,
 }: AccountSwitcherProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
   const role = currentUser?.role || "guest";
   const badge = getRoleBadgeStyle(role);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const quotaDisplay =
     role === "admin"
@@ -215,196 +214,187 @@ function AccountSwitcher({
       : "-";
 
   return (
-    <div className="fixed top-5 right-4 sm:right-6 z-50" ref={dropdownRef}>
-      {/* Trigger Button */}
-      <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2b2d31] hover:bg-[#35373c] border border-[#3f4147] hover:border-[#4e5058] shadow-lg shadow-black/30 transition-all select-none"
-        title="Beralih Akun / Hak Akses"
-      >
-        <span
-          className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
-        >
-          {badge.label}
-        </span>
-        <span className="hidden sm:inline-block text-xs font-medium text-[#f2f3f5] max-w-[90px] truncate">
-          {currentUser?.username || "Guest"}
-        </span>
-        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-          <Zap className="w-3 h-3" />
-          <span>{quotaDisplay}</span>
-        </span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-[#949ba4] transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {/* Dropdown Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute top-12 right-0 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#2b2d31] border border-[#3f4147] shadow-2xl p-4 text-xs z-50 flex flex-col gap-3.5"
+    <div className="fixed top-5 right-4 sm:right-6 z-50">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 px-3 py-1.5 h-auto rounded-full bg-[#2b2d31] hover:bg-[#35373c] border-[#3f4147] hover:border-[#4e5058] shadow-lg shadow-black/30 transition-all select-none text-[#dbdee1]"
           >
-            {/* User Profile Header */}
-            <div className="flex flex-col gap-2 pb-3 border-b border-[#383a40]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#383a40] flex items-center justify-center text-[#dbdee1]">
+            <Badge
+              variant="outline"
+              className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
+            >
+              {badge.label}
+            </Badge>
+            <span className="hidden sm:inline-block text-xs font-medium text-[#f2f3f5] max-w-[90px] truncate">
+              {currentUser?.username || "Guest"}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+              <Zap className="w-3 h-3" />
+              <span>{quotaDisplay}</span>
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#949ba4]" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="end"
+          className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#2b2d31] border-[#3f4147] shadow-2xl p-4 text-xs z-50 flex flex-col gap-3.5"
+        >
+          {/* User Profile Header */}
+          <div className="flex flex-col gap-2 pb-3 border-b border-[#383a40]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar className="w-8 h-8 rounded-full bg-[#383a40] flex items-center justify-center text-[#dbdee1]">
+                  <AvatarFallback className="bg-[#383a40] text-xs">
                     <User className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm text-[#f2f3f5]">
-                      {currentUser?.username || "Guest (Tamu)"}
-                    </span>
-                    <span className="text-[11px] text-[#949ba4]">
-                      {role === "admin"
-                        ? "Akses Administrator Penuh"
-                        : role === "guru"
-                        ? "Akses Tenaga Pendidik"
-                        : role === "siswa"
-                        ? "Akses Peserta Didik"
-                        : "Pengunjung Publik"}
-                    </span>
-                  </div>
-                </div>
-                <span
-                  className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
-                >
-                  {badge.label}
-                </span>
-              </div>
-
-              {/* Sisa Kuota Banner */}
-              <div className="flex items-center justify-between bg-[#1e1f22] px-3 py-2 rounded-xl border border-[#383a40]">
-                <span className="text-[#949ba4] text-xs flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  Sisa Kuota Harian:
-                </span>
-                <span className="font-mono font-semibold text-amber-400 text-xs">
-                  {role === "admin"
-                    ? "Tanpa Batas (∞)"
-                    : `${currentUser?.remainingQuota ?? 0} / ${
-                        currentUser?.dailyLimit ?? 0
-                      } pesan`}
-                </span>
-              </div>
-
-              {/* Allowed Categories */}
-              <div className="flex flex-col gap-1.5 pt-1">
-                <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                  Topik yang Diizinkan:
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {currentUser?.allowedCategories &&
-                  currentUser.allowedCategories[0] === "*" ? (
-                    <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-[11px] text-purple-300 font-medium">
-                      ★ Semua Topik & Pencarian Web
-                    </span>
-                  ) : (
-                    currentUser?.allowedCategories?.map((cat) => (
-                      <span
-                        key={cat}
-                        className="px-2 py-0.5 rounded-md bg-[#1e1f22] border border-[#383a40] text-[10px] text-[#dbdee1]"
-                      >
-                        {cat}
-                      </span>
-                    ))
-                  )}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm text-[#f2f3f5]">
+                    {currentUser?.username || "Guest (Tamu)"}
+                  </span>
+                  <span className="text-[11px] text-[#949ba4]">
+                    {role === "admin"
+                      ? "Akses Administrator Penuh"
+                      : role === "guru"
+                      ? "Akses Tenaga Pendidik"
+                      : role === "siswa"
+                      ? "Akses Peserta Didik"
+                      : "Pengunjung Publik"}
+                  </span>
                 </div>
               </div>
-            </div>
-
-            {/* Switch User Selection */}
-            <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wider">
-                Ganti Akun Demo (RBAC)
-              </span>
-
-              {/* Guest Option */}
-              <button
-                onClick={async () => {
-                  setIsOpen(false);
-                  await onSwitchUser(null);
-                }}
-                className={`flex items-center justify-between p-2 rounded-xl transition-all border text-left ${
-                  role === "guest"
-                    ? "bg-[#383a40] border-[#5865f2] text-white"
-                    : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
-                }`}
+              <Badge
+                variant="outline"
+                className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badge.bg}`}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-zinc-700/60 flex items-center justify-center text-zinc-300 text-[11px]">
-                    <LogOut className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-xs">Mode Tamu (Guest)</span>
-                    <span className="text-[10px] text-[#949ba4]">
-                      Batas 10 pesan/hari • Tanpa Token
-                    </span>
-                  </div>
-                </div>
-                {role === "guest" && (
-                  <Check className="w-4 h-4 text-[#5865f2]" />
-                )}
-              </button>
-
-              {/* Registered Demo Users */}
-              {demoUsers.map((user) => {
-                const isCurrent = currentUser?.username === user.username;
-                const userBadge = getRoleBadgeStyle(user.role);
-
-                return (
-                  <button
-                    key={user.id}
-                    onClick={async () => {
-                      setIsOpen(false);
-                      await onSwitchUser(user.username);
-                    }}
-                    className={`flex items-center justify-between p-2 rounded-xl transition-all border text-left ${
-                      isCurrent
-                        ? "bg-[#383a40] border-[#5865f2] text-white"
-                        : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-[#2b2d31] flex items-center justify-center text-[#dbdee1] text-[11px]">
-                        <User className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-xs">
-                            {user.username}
-                          </span>
-                          <span
-                            className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full border ${userBadge.bg}`}
-                          >
-                            {userBadge.label}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-[#949ba4]">
-                          {user.role === "admin"
-                            ? "Tanpa batas kuota"
-                            : user.role === "guru"
-                            ? "200 pesan/hari + Riset Web"
-                            : "50 pesan/hari"}
-                        </span>
-                      </div>
-                    </div>
-                    {isCurrent && <Check className="w-4 h-4 text-[#5865f2]" />}
-                  </button>
-                );
-              })}
+                {badge.label}
+              </Badge>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+            {/* Sisa Kuota Banner */}
+            <div className="flex items-center justify-between bg-[#1e1f22] px-3 py-2 rounded-xl border border-[#383a40]">
+              <span className="text-[#949ba4] text-xs flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                Sisa Kuota Harian:
+              </span>
+              <span className="font-mono font-semibold text-amber-400 text-xs">
+                {role === "admin"
+                  ? "Tanpa Batas (∞)"
+                  : `${currentUser?.remainingQuota ?? 0} / ${
+                      currentUser?.dailyLimit ?? 0
+                    } pesan`}
+              </span>
+            </div>
+
+            {/* Allowed Categories */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                Topik yang Diizinkan:
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {currentUser?.allowedCategories &&
+                currentUser.allowedCategories[0] === "*" ? (
+                  <Badge
+                    variant="outline"
+                    className="px-2 py-0.5 rounded-md bg-purple-500/15 border-purple-500/30 text-[11px] text-purple-300 font-medium"
+                  >
+                    ★ Semua Topik & Pencarian Web
+                  </Badge>
+                ) : (
+                  currentUser?.allowedCategories?.map((cat) => (
+                    <Badge
+                      key={cat}
+                      variant="outline"
+                      className="px-2 py-0.5 rounded-md bg-[#1e1f22] border-[#383a40] text-[10px] text-[#dbdee1] font-normal"
+                    >
+                      {cat}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Switch User Selection */}
+          <DropdownMenuGroup className="flex flex-col gap-1.5">
+            <DropdownMenuLabel className="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wider px-1 py-0.5">
+              Ganti Akun Demo (RBAC)
+            </DropdownMenuLabel>
+
+            {/* Guest Option */}
+            <DropdownMenuItem
+              onClick={() => onSwitchUser(null)}
+              className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
+                role === "guest"
+                  ? "bg-[#383a40] border-[#5865f2] text-white"
+                  : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-zinc-700/60 flex items-center justify-center text-zinc-300 text-[11px]">
+                  <LogOut className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium text-xs">Mode Tamu (Guest)</span>
+                  <span className="text-[10px] text-[#949ba4]">
+                    Batas 10 pesan/hari • Tanpa Token
+                  </span>
+                </div>
+              </div>
+              {role === "guest" && <Check className="w-4 h-4 text-[#5865f2]" />}
+            </DropdownMenuItem>
+
+            {/* Registered Demo Users */}
+            {demoUsers.map((user) => {
+              const isCurrent = currentUser?.username === user.username;
+              const userBadge = getRoleBadgeStyle(user.role);
+
+              return (
+                <DropdownMenuItem
+                  key={user.id}
+                  onClick={() => onSwitchUser(user.username)}
+                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
+                    isCurrent
+                      ? "bg-[#383a40] border-[#5865f2] text-white"
+                      : "bg-[#1e1f22]/70 hover:bg-[#383a40] border-transparent text-[#dbdee1]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-[#2b2d31] flex items-center justify-center text-[#dbdee1] text-[11px]">
+                      <User className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-xs">
+                          {user.username}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full border ${userBadge.bg}`}
+                        >
+                          {userBadge.label}
+                        </Badge>
+                      </div>
+                      <span className="text-[10px] text-[#949ba4]">
+                        {user.role === "admin"
+                          ? "Tanpa batas kuota"
+                          : user.role === "guru"
+                          ? "200 pesan/hari + Riset Web"
+                          : "50 pesan/hari"}
+                      </span>
+                    </div>
+                  </div>
+                  {isCurrent && <Check className="w-4 h-4 text-[#5865f2]" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -436,7 +426,7 @@ function TypingIndicator() {
   );
 }
 
-// ─── ChatBubble ───────────────────────────────────────────────────────────────
+// ─── ChatBubble (Shadcn Badge for sources) ────────────────────────────────────
 
 function ChatBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
@@ -483,7 +473,7 @@ function ChatBubble({ message }: { message: Message }) {
           duration={0.35}
         />
 
-        {/* Sumber Basis Pengetahuan Terverifikasi */}
+        {/* Sumber Basis Pengetahuan Terverifikasi (Shadcn Badge) */}
         {hasSources && (
           <div className="mt-2 pt-2.5 border-t border-[#383a40]/70 flex flex-col gap-1.5">
             <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1.5">
@@ -492,9 +482,10 @@ function ChatBubble({ message }: { message: Message }) {
             </span>
             <div className="flex flex-wrap gap-1.5">
               {message.sources!.map((s, idx) => (
-                <span
+                <Badge
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1e1f22]/90 border border-[#3f4147] text-[11px] text-[#dbdee1] shadow-xs"
+                  variant="outline"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1e1f22]/90 border-[#3f4147] text-[11px] text-[#dbdee1] shadow-xs font-normal"
                   title={s.title}
                 >
                   <span className="font-semibold text-[#5865f2]">
@@ -502,7 +493,7 @@ function ChatBubble({ message }: { message: Message }) {
                   </span>
                   <span className="text-[#4e5058]">•</span>
                   <span className="text-[#949ba4]">{s.category}</span>
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
@@ -549,12 +540,6 @@ export default function ChatPage() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [apiToken, setApiToken] = useState<string | null>(null);
-
-  // Nexus Toast Stack Hook
-  const { toasts, push: pushToast, dismiss: dismissToast, clear: clearToasts } =
-    useToastStack([], {
-      enableSound: true,
-    });
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -623,14 +608,9 @@ export default function ChatPage() {
         localStorage.removeItem("chat_token");
         setApiToken(null);
         await fetchProfile(null);
-        pushToast(
-          {
-            title: "Beralih ke Akun Tamu",
-            description: "Anda kini menggunakan mode Guest (10 kuota/hari).",
-            type: "info",
-          },
-          { sound: true }
-        );
+        toast.info("Beralih ke Akun Tamu", {
+          description: "Anda kini menggunakan mode Guest (10 kuota/hari).",
+        });
         return;
       }
 
@@ -651,24 +631,14 @@ export default function ChatPage() {
       setApiToken(data.token);
       setCurrentUser(data.user);
 
-      pushToast(
-        {
-          title: "Login Berhasil",
-          description: `Masuk sebagai ${data.user.username} (${data.user.role}).`,
-          type: "success",
-        },
-        { sound: true }
-      );
+      toast.success("Login Berhasil", {
+        description: `Masuk sebagai ${data.user.username} (${data.user.role}).`,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal mengganti akun.";
-      pushToast(
-        {
-          title: "Gagal Ganti Akun",
-          description: msg,
-          type: "error",
-        },
-        { sound: true }
-      );
+      toast.error("Gagal Ganti Akun", {
+        description: msg,
+      });
     }
   };
 
@@ -719,14 +689,9 @@ export default function ChatPage() {
           `Server error (${response.status})`;
 
         if (response.status === 429) {
-          pushToast(
-            {
-              title: "Kuota Harian Habis",
-              description: errMsg,
-              type: "warning",
-            },
-            { sound: true }
-          );
+          toast.warning("Kuota Harian Habis", {
+            description: errMsg,
+          });
         }
 
         throw new Error(errMsg);
@@ -765,15 +730,20 @@ export default function ChatPage() {
       const msg =
         err instanceof Error ? err.message : "Gagal terhubung ke server.";
       setError(msg);
-      pushToast(
-        {
-          title: "Gagal Mengirim Pesan",
-          description: msg,
-          type: "error",
-          action: { label: "Coba Lagi" },
+      toast.error("Gagal Mengirim Pesan", {
+        description: msg,
+        action: {
+          label: "Coba Lagi",
+          onClick: () => {
+            const lastUserMsg = [...messages]
+              .reverse()
+              .find((m) => m.role === "user");
+            if (lastUserMsg) {
+              handleSend(lastUserMsg.content);
+            }
+          },
         },
-        { sound: true }
-      );
+      });
     } finally {
       setIsLoading(false);
     }
@@ -794,14 +764,9 @@ export default function ChatPage() {
     setMessages([]);
     setShowConfirm(false);
     setError(null);
-    pushToast(
-      {
-        title: "Percakapan Dibersihkan",
-        description: "Semua pesan sesi ini telah dihapus.",
-        type: "info",
-      },
-      { sound: true }
-    );
+    toast.info("Percakapan Dibersihkan", {
+      description: "Semua pesan sesi ini telah dihapus.",
+    });
   };
 
   return (
@@ -809,70 +774,43 @@ export default function ChatPage() {
       {/* Dynamic Island Nav */}
       <DynamicIslandNav onClear={() => setShowConfirm(true)} />
 
-      {/* RBAC Account Switcher & Quota Status */}
+      {/* RBAC Account Switcher & Quota Status (Shadcn DropdownMenu & Badge) */}
       <AccountSwitcher
         currentUser={currentUser}
         demoUsers={demoUsers}
         onSwitchUser={handleSwitchUser}
       />
 
-      {/* Nexus Toast Stack (Placed right under the notch) */}
-      <div className="fixed top-[74px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-        <div className="pointer-events-auto">
-          <ToastStack
-            toasts={toasts}
-            onDismiss={dismissToast}
-            onAction={(t) => {
-              if (t.type === "error" && messages.length > 0) {
-                const lastUserMsg = [...messages]
-                  .reverse()
-                  .find((m) => m.role === "user");
-                if (lastUserMsg) {
-                  handleSend(lastUserMsg.content);
-                }
-              }
-            }}
-            position="top"
-            expand="hover"
-            max={3}
-            width={350}
-            duration={5000}
-            enableSound={true}
-          />
-        </div>
-      </div>
-
-      {/* Aceternity Animated Modal for Confirmation */}
-      <Modal open={showConfirm} setOpen={setShowConfirm}>
-        <ModalBody className="border border-[#3f4147] bg-[#2b2d31] shadow-2xl">
-          <ModalContent className="p-6 sm:p-7">
-            <h3 className="text-lg font-semibold text-[#f2f3f5] tracking-tight">
+      {/* Shadcn Dialog Confirmation for Clearing Conversation */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-[#f2f3f5] tracking-tight">
               Hapus Percakapan
-            </h3>
-            <p className="text-xs text-[#949ba4] mt-1 mb-4">
-              Tindakan ini tidak dapat dibatalkan
-            </p>
-            <p className="text-sm text-[#dbdee1] leading-relaxed">
-              Semua pesan dalam percakapan ini akan dibersihkan secara permanen
-              dari layar sesi Anda.
-            </p>
-          </ModalContent>
-          <ModalFooter className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-4 flex justify-end gap-3">
-            <button
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#949ba4] mt-1">
+              Tindakan ini tidak dapat dibatalkan. Semua pesan dalam percakapan ini
+              akan dibersihkan secara permanen dari layar sesi Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex justify-end gap-2.5">
+            <Button
+              variant="secondary"
+              className="bg-[#383a40] hover:bg-[#404249] text-[#dbdee1] rounded-xl text-xs font-medium cursor-pointer"
               onClick={() => setShowConfirm(false)}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-[#dbdee1] hover:text-white bg-[#383a40] hover:bg-[#404249] transition-all"
             >
               Batal
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-medium shadow-md cursor-pointer"
               onClick={handleClearConfirm}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-all shadow-md"
             >
               Hapus
-            </button>
-          </ModalFooter>
-        </ModalBody>
-      </Modal>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Chat area */}
       <div className="relative z-10 flex flex-col flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
