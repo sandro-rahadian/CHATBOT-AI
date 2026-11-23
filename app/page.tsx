@@ -1,9 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
+
+// ─── Icons from IconMCP ───────────────────────────────────────────────────────
+import {
+  BookOpen,
+  Lock,
+  LogIn,
+  UserPlus,
+} from "@/components/ui/icons";
 
 // ─── Shadcn UI Components ─────────────────────────────────────────────────────
 import { Button } from "@/components/ui/button";
@@ -21,7 +30,6 @@ import {
 import {
   SidebarDockMenu,
   type UserProfile,
-  type DemoUser,
 } from "@/components/sidebar-dock-menu";
 
 // ─── Local UI Elements ────────────────────────────────────────────────────────
@@ -124,7 +132,7 @@ function ChatBubble({ message }: { message: Message }) {
         {hasSources && (
           <div className="mt-2 pt-2.5 border-t border-[#383a40]/70 flex flex-col gap-1.5">
             <span className="text-[11px] font-medium text-[#949ba4] flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-[#5865f2]" />
+              <BookOpen size={14} className="text-[#5865f2]" />
               Sumber Informasi Terverifikasi:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -167,11 +175,11 @@ function ChatBubble({ message }: { message: Message }) {
 // ─── ChatPage (default export) ────────────────────────────────────────────────
 
 const CHAT_PLACEHOLDERS = [
-  "Tanya seputar SMK di Malang...",
+  "Tanya seputar jurusan di SMK Malang...",
   "Apa saja jurusan di SMK Telkom Malang?",
   "Dimana alamat SMKN 5 Malang?",
   "Bagaimana cara daftar PPDB di SMKN 4 Malang?",
-  "Siapa kepala sekolah SMK Telkom Malang?",
+  "Fasilitas apa saja yang ada di SMK Telkom?",
   "Ekskul apa saja yang ada di SMKN 3 Malang?",
 ];
 
@@ -181,16 +189,18 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // RBAC State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
     "https://chatbot-ai-production-b22e59af.up.railway.app";
+
+  const isLoggedIn = !!apiToken && currentUser?.role !== "guest";
 
   // Fetch /me profile
   const fetchProfile = useCallback(
@@ -207,11 +217,7 @@ export default function ChatPage() {
           // Token invalid, revert to guest
           localStorage.removeItem("chat_token");
           setApiToken(null);
-          const guestRes = await fetch(`${apiBase}/me`);
-          if (guestRes.ok) {
-            const guestProfile: UserProfile = await guestRes.json();
-            setCurrentUser(guestProfile);
-          }
+          setCurrentUser(null);
         }
       } catch (e) {
         console.error("Gagal mengambil profil user:", e);
@@ -220,73 +226,25 @@ export default function ChatPage() {
     [apiBase]
   );
 
-  // Initial load: Fetch /users and /me
+  // Initial load: Read stored token
   useEffect(() => {
-    async function initAuth() {
-      // 1. Fetch demo users list
-      try {
-        const usersRes = await fetch(`${apiBase}/users`);
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          setDemoUsers(data.users || []);
-        }
-      } catch (e) {
-        console.error("Gagal mengambil daftar user demo:", e);
-      }
-
-      // 2. Read stored token
-      const savedToken = localStorage.getItem("chat_token");
-      if (savedToken) {
-        setApiToken(savedToken);
-        await fetchProfile(savedToken);
-      } else {
-        await fetchProfile(null);
-      }
+    const savedToken = localStorage.getItem("chat_token");
+    if (savedToken) {
+      setApiToken(savedToken);
+      fetchProfile(savedToken);
+    } else {
+      fetchProfile(null);
     }
+  }, [fetchProfile]);
 
-    initAuth();
-  }, [apiBase, fetchProfile]);
-
-  // Switch User handler
-  const handleSwitchUser = async (username: string | null) => {
-    try {
-      if (!username) {
-        // Switch to guest
-        localStorage.removeItem("chat_token");
-        setApiToken(null);
-        await fetchProfile(null);
-        toast.info("Beralih ke Akun Tamu", {
-          description: "Anda kini menggunakan mode Guest (10 kuota/hari).",
-        });
-        return;
-      }
-
-      // Login via /login
-      const res = await fetch(`${apiBase}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Login gagal (${res.status})`);
-      }
-
-      const data = await res.json();
-      localStorage.setItem("chat_token", data.token);
-      setApiToken(data.token);
-      setCurrentUser(data.user);
-
-      toast.success("Login Berhasil", {
-        description: `Masuk sebagai ${data.user.username} (${data.user.role}).`,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal mengganti akun.";
-      toast.error("Gagal Ganti Akun", {
-        description: msg,
-      });
-    }
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("chat_token");
+    setApiToken(null);
+    setCurrentUser(null);
+    toast.info("Berhasil Keluar", {
+      description: "Sesi Anda telah berakhir. Anda kini dalam mode Tamu.",
+    });
   };
 
   // Auto-scroll to bottom whenever messages or loading state changes
@@ -296,6 +254,15 @@ export default function ChatPage() {
 
   const handleSend = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
+
+    // Strict Login Guard: Guest cannot send chat messages
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      toast.warning("Harap Masuk Terlebih Dahulu", {
+        description: "Anda harus login untuk dapat bertanya kepada asisten AI.",
+      });
+      return;
+    }
 
     const newUserMsg: Message = {
       id: crypto.randomUUID(),
@@ -399,6 +366,10 @@ export default function ChatPage() {
   // Called by PlaceholdersAndVanishInput onSubmit
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      return;
+    }
     const form = e.currentTarget;
     const input = form.querySelector("input") as HTMLInputElement | null;
     const val = input?.value || inputValue;
@@ -418,15 +389,52 @@ export default function ChatPage() {
 
   return (
     <div className="relative flex flex-col h-screen bg-[#313338] text-[#dbdee1] overflow-hidden">
-      {/* ── Framer Sidebar Dock Menu (Combined Navigation, Profile, Quota & Actions) ── */}
+      {/* ── Framer Sidebar Dock Menu ── */}
       <SidebarDockMenu
         currentUser={currentUser}
-        demoUsers={demoUsers}
-        onSwitchUser={handleSwitchUser}
+        onLogout={handleLogout}
         onClear={() => setShowConfirm(true)}
       />
 
-      {/* ── Shadcn Dialog Confirmation for Clearing Conversation ── */}
+      {/* ── Login Required Dialog ── */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
+          <DialogHeader>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-2">
+              <Lock size={20} />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-[#f2f3f5] tracking-tight">
+              Masuk untuk Memulai Chat
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#949ba4] mt-1 leading-relaxed">
+              Anda saat ini berada dalam mode Tamu. Untuk menjaga batas kuota dan
+              hak akses informasi sekolah, silakan login dengan akun Anda atau buat
+              akun baru.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-5 flex flex-col sm:flex-row gap-2.5">
+            <Link href="/signup" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="w-full bg-[#1e1f22] border-[#383a40] text-[#dbdee1] hover:text-white rounded-xl text-xs font-medium cursor-pointer"
+              >
+                <UserPlus size={14} className="mr-1.5" />
+                Daftar Akun
+              </Button>
+            </Link>
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button
+                className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer"
+              >
+                <LogIn size={14} className="mr-1.5" />
+                Masuk Sekarang
+              </Button>
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Confirmation for Clearing Conversation ── */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="border border-[#3f4147] bg-[#2b2d31] text-[#dbdee1] shadow-2xl sm:max-w-md p-6 rounded-2xl">
           <DialogHeader>
@@ -462,9 +470,51 @@ export default function ChatPage() {
         {/* Messages scroll container */}
         <div className="flex-1 overflow-y-auto chat-scroll pt-20 sm:pt-6 pb-4">
           <div className="flex flex-col gap-4 py-4">
-            {messages.map((msg) => (
-              <ChatBubble key={msg.id} message={msg} />
-            ))}
+            {messages.length === 0 ? (
+              /* Welcome Card for Empty State */
+              <div className="flex flex-col items-center justify-center text-center py-12 px-4 max-w-md mx-auto my-auto">
+                <div className="w-16 h-16 rounded-2xl bg-[#2b2d31] border border-white/10 flex items-center justify-center shadow-lg mb-4">
+                  <Image
+                    src="/logo.png"
+                    alt="KeraVokasi"
+                    width={48}
+                    height={48}
+                    className="rounded-xl object-cover"
+                    priority
+                  />
+                </div>
+                <h2 className="text-lg font-bold text-[#f2f3f5] tracking-tight">
+                  KeraVokasi AI Chatbot
+                </h2>
+                <p className="text-xs text-[#949ba4] mt-1.5 mb-5 leading-relaxed">
+                  Asisten resmi seputar sekolah kejuruan (SMK) di Malang. Dapatkan
+                  informasi jurusan, pendaftaran PPDB, kurikulum, dan fasilitas
+                  sekolah.
+                </p>
+
+                {!isLoggedIn && (
+                  <div className="flex items-center gap-2.5 w-full justify-center">
+                    <Link href="/login">
+                      <Button className="bg-[#5865f2] hover:bg-[#4752c4] text-white rounded-xl text-xs font-semibold px-4 h-9 shadow-md cursor-pointer">
+                        <LogIn size={14} className="mr-1.5" />
+                        Masuk ke Akun
+                      </Button>
+                    </Link>
+                    <Link href="/signup">
+                      <Button
+                        variant="outline"
+                        className="bg-[#1e1f22] border-[#383a40] text-[#dbdee1] hover:text-white rounded-xl text-xs font-medium px-4 h-9 cursor-pointer"
+                      >
+                        <UserPlus size={14} className="mr-1.5" />
+                        Daftar Baru
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)
+            )}
 
             {/* Typing indicator */}
             <AnimatePresence>
@@ -488,14 +538,39 @@ export default function ChatPage() {
           />
 
           <div className="relative">
-            <PlaceholdersAndVanishInput
-              placeholders={CHAT_PLACEHOLDERS}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                if (error) setError(null);
-              }}
-              onSubmit={handleFormSubmit}
-            />
+            {isLoggedIn ? (
+              /* Normal Input when Logged In */
+              <PlaceholdersAndVanishInput
+                placeholders={CHAT_PLACEHOLDERS}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (error) setError(null);
+                }}
+                onSubmit={handleFormSubmit}
+              />
+            ) : (
+              /* Locked Input Bar for Guest */
+              <div
+                onClick={() => setShowLoginPrompt(true)}
+                className="w-full bg-[#2b2d31] hover:bg-[#32353b] border border-[#3f4147] rounded-full p-2.5 px-4 flex items-center justify-between cursor-pointer transition-all shadow-md group"
+              >
+                <div className="flex items-center gap-2 text-xs text-[#949ba4] group-hover:text-[#dbdee1]">
+                  <Lock size={15} className="text-amber-400" />
+                  <span>
+                    Anda harus login terlebih dahulu untuk mengirim pesan...
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs font-semibold text-white bg-[#5865f2] hover:bg-[#4752c4] px-3 py-1 rounded-full shadow-xs"
+                  >
+                    Masuk
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Error Text Directly Below Input */}
             <AnimatePresence>

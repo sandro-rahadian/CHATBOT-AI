@@ -4,7 +4,13 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, School, ShieldCheck, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import {
+  User,
+  UserPlus,
+  ArrowLeft,
+  School,
+} from "@/components/ui/icons";
 import { toast } from "sonner";
 import { cn } from "cn";
 
@@ -58,6 +64,13 @@ export function SignupForm({
       return;
     }
 
+    if (!password.trim() || password.length < 4) {
+      toast.warning("Kata Sandi Terlalu Pendek", {
+        description: "Kata sandi minimal 4 karakter.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const parsedSchoolId = schoolId === "all" ? null : parseInt(schoolId, 10);
@@ -67,6 +80,7 @@ export function SignupForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
+          password: password.trim(),
           role,
           school_id: parsedSchoolId,
         }),
@@ -81,7 +95,7 @@ export function SignupForm({
       localStorage.setItem("chat_token", data.token);
 
       toast.success("Pendaftaran Berhasil!", {
-        description: `Akun ${data.user.username} (${data.user.role}) aktif. Kuota harian: ${data.user.dailyLimit} pesan.`,
+        description: `Akun ${data.user.username} (${data.user.role}) aktif. Silakan mulai menggunakan chatbot.`,
       });
 
       router.push("/");
@@ -119,7 +133,7 @@ export function SignupForm({
             Daftar Akun Baru
           </CardTitle>
           <CardDescription className="text-xs text-[#949ba4]">
-            Dapatkan hak akses materi dan kuota harian sesuai status Anda
+            Daftarkan akun untuk mendapatkan akses chat dan kuota harian
           </CardDescription>
         </CardHeader>
 
@@ -138,6 +152,7 @@ export function SignupForm({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="bg-[#1e1f22] border-[#383a40] text-sm text-[#f2f3f5] focus:border-[#5865f2] rounded-xl h-10 px-3"
+                  required
                 />
               </Field>
 
@@ -227,15 +242,16 @@ export function SignupForm({
               {/* Password Field */}
               <Field>
                 <FieldLabel htmlFor="signup-password" className="text-xs text-[#dbdee1]">
-                  Kata Sandi (Opsional)
+                  Kata Sandi *
                 </FieldLabel>
                 <Input
                   id="signup-password"
                   type="password"
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Minimal 4 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-[#1e1f22] border-[#383a40] text-sm text-[#f2f3f5] focus:border-[#5865f2] rounded-xl h-10 px-3"
+                  required
                 />
               </Field>
 
@@ -250,7 +266,10 @@ export function SignupForm({
                     Mendaftarkan Akun...
                   </>
                 ) : (
-                  "Daftar Akun Sekarang"
+                  <>
+                    <UserPlus size={16} className="mr-2" />
+                    Daftar Akun Sekarang
+                  </>
                 )}
               </Button>
             </FieldGroup>
@@ -271,8 +290,8 @@ export function SignupForm({
               href="/"
               className="inline-flex items-center justify-center gap-1.5 text-[#949ba4] hover:text-[#f2f3f5] transition-colors pt-1"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Kembali ke Percakapan Chat
+              <ArrowLeft size={14} />
+              Kembali ke Halaman Utama
             </Link>
           </div>
         </CardContent>
