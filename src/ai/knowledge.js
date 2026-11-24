@@ -127,10 +127,20 @@ ATURAN UTAMA (SANGAT KETAT):
      * Instagram & TikTok: @smktelkommalang
      * Jam Layanan: Senin - Sabtu pukul 06.00 - 16.00 WIB (Minggu tutup)
    - Jika menanyakan sekolah negeri atau swasta lain di Malang yang informasinya belum lengkap di ketiga sumber, arahkan ke website resmi sekolah terkait atau Dinas Pendidikan Provinsi Jawa Timur.
-5. FORMAT JAWABAN (SANGAT BERSIH & RAPI):
-   - Gunakan format teks standar yang rapi dan mudah dibaca.
-   - BOLD: Gunakan tanda bintang ganda **teks** untuk judul bagian atau penekanan (contoh: **Alamat:**, **Jurusan:**). JANGAN gunakan bintang satu atau bintang acak di tengah kalimat.
-   - BULLET LIST: Gunakan tanda strip '-' atau titik bulat '•' diikuti spasi pada baris baru untuk daftar rincian.
+5. FORMAT JAWABAN (SANGAT BERSIH, RAPI, & KONSISTEN):
+   - Gunakan format teks standar yang rapi, padat, dan mudah dibaca.
+   - BOLD KONSISTEN:
+     * Tebalkan judul bagian atau nomor sekolah (contoh: **1. SMK Telkom Malang**, **2. SMK Negeri 4 Malang**, **3. SMK Negeri 5 Malang**).
+     * Saat menampilkan butir daftar jurusan atau rincian untuk setiap sekolah, gunakan format yang SERAGAM dan KONSISTEN di semua sekolah:
+       - **Nama Jurusan (Singkatan)**: penjelasan singkat atau fokus bidangnya
+       atau jika hanya menyebutkan nama jurusan:
+       - **Nama Jurusan (Singkatan)**
+     * JANGAN PERNAH membuat satu sekolah ditebalkan sementara sekolah lain tidak ditebalkan atau sebagian kata acak ditebalkan.
+     * Hanya tebalkan label/nama jurusannya saja (contoh: '- **Rekayasa Perangkat Lunak (RPL)**: Pemrograman...', BUKAN menebalkan seluruh kalimat butir).
+   - BULLET LIST RAPAT & COMPACT (DILARANG DOUBLE ENTER / TIDAK BERJARAK):
+     * Wajib selalu gunakan tanda strip '-' diikuti satu spasi di awal baris (contoh: '- **RPL**: Pembuatan aplikasi').
+     * DILARANG menggunakan karakter simbol titik bulat unicode seperti '•', '●', atau '○'. Gunakan selalu tanda strip '-'.
+     * DILARANG menambahkan baris kosong antar-butir list (jangan ada double newline / enter ganda di antara butir). Setiap butir list harus langsung berlanjut di baris baru tepat di bawah butir sebelumnya agar daftar tampil rapat dan rapi.
    - LINK: Jika mencantumkan alamat website atau tautan sumber, tuliskan link lengkap yang dapat diklik langsung (contoh: https://smkn4malang.sch.id). Jangan membuat format markdown link yang berantakan atau tertutup tanda bintang aneh seperti '*Website:* [link]'.
    - Jaga agar spasi dan baris tersusun rapi tanpa simbol aneh atau tanda baca berulang.
 6. NATURAL: Jangan menyebutkan istilah teknis seperti "berdasarkan database di atas", "menurut dokumen panduan", atau "berdasarkan pencarian tavily". Jawablah langsung secara alami, ramah, dan solutif sebagai KeraVokasi.
@@ -249,13 +259,56 @@ export function selectRelevantKnowledge(message, items = [], userAllowedCategori
   });
 
   scored.sort((a, b) => b.score - a.score);
-  const maxSelected = schoolKeywords.length > 1 ? 8 : 4;
+
+  if (schoolKeywords.length > 1) {
+    // Pastikan setiap sekolah yang disebut pengguna mendapatkan alokasi item relevan
+    const perSchoolItems = [];
+    for (const kw of schoolKeywords) {
+      const matchingForSchool = scored.filter((s) => {
+        const name = (s.item.school_name || "smk telkom malang").toLowerCase();
+        if (kw === "telkom") return name.includes("telkom");
+        return name.includes(`smkn ${kw}`) || name.includes(`smk negeri ${kw}`) || name.includes(`smk ${kw}`);
+      });
+      // Ambil hingga 5 item teratas per sekolah
+      perSchoolItems.push(...matchingForSchool.slice(0, 5).map((s) => s.item));
+    }
+    const finalSelected = perSchoolItems.length > 0 ? perSchoolItems : scored.slice(0, 15).map((s) => s.item);
+    return {
+      selectedItems: finalSelected,
+      includeGuide,
+    };
+  }
+
+  const maxSelected = 4;
   const topItems = scored.slice(0, maxSelected).map((s) => s.item);
 
   return {
     selectedItems: topItems,
     includeGuide,
   };
+}
+
+/**
+ * Membersihkan output markdown dari Gemini agar rapat, bebas baris kosong berlebih,
+ * dan menggunakan bullet list standar '-'.
+ */
+export function cleanMarkdownOutput(text) {
+  if (typeof text !== "string") return text;
+  let cleaned = text;
+
+  // 1. Ubah bullet unicode (•, ●, ○) di awal baris menjadi standard markdown hyphen (-)
+  cleaned = cleaned.replace(/^[ \t]*[•●○][ \t]*/gm, "- ");
+
+  // 2. Hilangkan baris kosong ganda (double newline) di antara item-item bullet list agar list rapat (tight list)
+  cleaned = cleaned.replace(/(^[-*]\s+[^\n]+)\n\n+(?=[-*]\s+)/gm, "$1\n");
+
+  // 3. Hilangkan baris kosong ganda di antara item numbered list
+  cleaned = cleaned.replace(/(^\d+\.\s+[^\n]+)\n\n+(?=\d+\.\s+)/gm, "$1\n");
+
+  // 4. Batasi newline beruntun maksimal 2 (\n\n) agar tidak ada rongga kosong berlebihan
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+
+  return cleaned.trim();
 }
 
 /**

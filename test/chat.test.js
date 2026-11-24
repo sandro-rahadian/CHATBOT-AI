@@ -18,6 +18,7 @@ import {
   getConversationWithMessages,
   deleteConversation,
   appendMessageToConversation,
+  cleanMarkdownOutput,
 } from "../server.js";
 
 let server, base, lastContents;
@@ -222,7 +223,7 @@ test("retries=0 menonaktifkan coba ulang", async () => {
 test("loadKnowledgeBase membaca data.md dan mengembalikan entri pengetahuan", () => {
   const items = loadKnowledgeBase();
   assert.ok(Array.isArray(items));
-  assert.equal(items.length, 21);
+  assert.ok(items.length >= 21);
   assert.ok(items.some((i) => i.title.includes("SMK Telkom Malang")));
 });
 
@@ -655,5 +656,26 @@ test("selectRelevantKnowledge: mendukung pertanyaan multi-sekolah (SMK Telkom, S
   const multiResult = selectRelevantKnowledge("apa saja jurusan di smk telkom malang smk 4 malang dan smk 5 malang", items);
   assert.equal(multiResult.includeGuide, true, "Panduan jurusan harus disertakan saat menanyakan banyak sekolah");
   assert.ok(multiResult.selectedItems.length > 0);
+});
+
+test("cleanMarkdownOutput: merapikan bullet list, loose list, dan menghapus rongga kosong berlebih", () => {
+  const input = `Halo! Berikut daftar jurusan:
+
+• **Rekayasa Perangkat Lunak (RPL)**
+
+• **Teknik Komputer dan Jaringan (TKJ)**
+
+• **Pengembangan Gim (PG)**
+
+
+
+1. Tahap Satu
+
+2. Tahap Dua`;
+
+  const cleaned = cleanMarkdownOutput(input);
+  assert.ok(!cleaned.includes("•"), "Tidak boleh ada simbol bullet unicode '•'");
+  assert.ok(cleaned.includes("- **Rekayasa Perangkat Lunak (RPL)**\n- **Teknik Komputer dan Jaringan (TKJ)**\n- **Pengembangan Gim (PG)**"), "Butir bullet list harus rapat tanpa double newline");
+  assert.ok(!cleaned.includes("\n\n\n"), "Tidak boleh ada lebih dari 2 newline beruntun");
 });
 

@@ -26,6 +26,7 @@ import {
   extractSources,
   getCachedKnowledgeItems,
   setCachedKnowledgeItems,
+  cleanMarkdownOutput,
 } from "./ai/knowledge.js";
 import {
   shouldPerformWebSearch,
@@ -452,16 +453,19 @@ export function createApp({
       }
 
       const currentPrompt = buildSystemPrompt(selectedItems, guideDoc, webResultsText);
-      const reply = await withRetry(() => generate(contents, currentPrompt), {
+      const rawReply = await withRetry(() => generate(contents, currentPrompt), {
         retries,
         delayMs: retryDelayMs,
         onRetry: (err, n) =>
           console.warn(`[Gemini] percobaan ${n} gagal (${err?.status ?? err?.code ?? "error"}), mencoba ulang...`),
       });
 
-      if (!reply || !reply.trim()) {
+      if (!rawReply || !rawReply.trim()) {
         return res.status(502).json({ error: "Gemini tidak mengembalikan jawaban" });
       }
+
+      // Bersihkan format markdown (rapikan bullet list, hilangkan double newline antar item, seragamkan bullet)
+      const reply = cleanMarkdownOutput(rawReply);
 
       // Kurangi kuota harian user setelah pesan berhasil dijawab
       await consumeUserQuota(userAccess);
