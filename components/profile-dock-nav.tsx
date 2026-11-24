@@ -9,7 +9,7 @@ import {
   LogOut,
   ChevronDown,
 } from "@/components/ui/icons";
-import { AnimatedArrowButton } from "@/components/ui/animated-arrow-button";
+import { DotButton } from "@/components/ui/dot-button";
 import {
   Tooltip,
   TooltipContent,
@@ -123,29 +123,33 @@ export function ProfileDockNav({
               </div>
             </div>
 
-            {/* Menu Actions */}
+            {/* Menu Actions dengan Expanding Hover Animation (Tanpa Titik di Idle State) */}
             {isLoggedIn ? (
               <div className="flex flex-col">
-                <AnimatedArrowButton
-                  text="Keluar (Logout)"
-                  variant="dark"
+                <DotButton
+                  variant="danger"
+                  icon={<LogOut size={14} className="shrink-0" />}
                   onClick={() => {
                     setMenuOpen(false);
                     onLogout();
                   }}
-                />
+                  className="w-full h-10 text-xs font-semibold"
+                >
+                  Keluar (Logout)
+                </DotButton>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {/* Button Masuk Utama tanpa titik */}
-                <Link
+                {/* Button Masuk Utama dengan Expanding Hover Animation */}
+                <DotButton
                   href="/login"
+                  variant="dark"
+                  icon={<LogIn size={14} className="shrink-0" />}
                   onClick={() => setMenuOpen(false)}
-                  className="w-full h-10 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-medium flex items-center justify-center gap-2 border border-[#2E2E2F] transition-colors shadow-xs"
+                  className="w-full h-10 text-xs font-semibold"
                 >
-                  <LogIn size={14} className="text-white" />
-                  <span>Masuk Akun</span>
-                </Link>
+                  Masuk Akun
+                </DotButton>
 
                 {/* Sekunder: Link ke Daftar Akun */}
                 <p className="text-[11px] text-[#737373] text-center pt-0.5">

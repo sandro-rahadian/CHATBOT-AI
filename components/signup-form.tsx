@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "cn";
 
-import { Button } from "@/components/ui/button";
+import { DotButton } from "@/components/ui/dot-button";
 import {
   Card,
   CardContent,
@@ -216,23 +216,17 @@ export function SignupForm({
                 />
               </Field>
 
-              <Button
+              <DotButton
                 type="submit"
+                variant="dark"
                 disabled={isLoading}
-                className="w-full bg-[#171717] hover:bg-black text-white font-medium rounded-full h-11 text-sm border border-[#2E2E2F] shadow-xs hover:border-[#3F3F3F] cursor-pointer transition-colors mt-3"
+                isLoading={isLoading}
+                loadingText="Mendaftarkan Akun..."
+                icon={<UserPlus size={16} />}
+                className="w-full h-11 text-sm mt-3"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
-                    Mendaftarkan Akun...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus size={16} className="mr-2 text-white" />
-                    Daftar Akun Sekarang
-                  </>
-                )}
-              </Button>
+                Daftar Akun Sekarang
+              </DotButton>
             </FieldGroup>
           </form>
 
