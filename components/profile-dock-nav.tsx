@@ -127,7 +127,7 @@ export function ProfileDockNav({
               <div className="flex flex-col">
                 <AnimatedArrowButton
                   text="Keluar (Logout)"
-                  variant="white"
+                  variant="dark"
                   onClick={() => {
                     setMenuOpen(false);
                     onLogout();
@@ -136,11 +136,11 @@ export function ProfileDockNav({
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {/* Button Masuk Utama */}
+                {/* Button Masuk Utama - Selaras dengan DESIGN.md (#171717, border #2E2E2F, rounded-full) */}
                 <Link
                   href="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="w-full h-10 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-none"
+                  className="w-full h-10 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-medium flex items-center justify-center gap-2 border border-[#2E2E2F] transition-colors shadow-xs"
                 >
                   <LogIn size={14} className="text-white" />
                   <span>Masuk Akun</span>
@@ -175,7 +175,7 @@ export function ProfileDockNav({
         >
           {/* User Avatar + Identity */}
           <div className="flex items-center gap-2 overflow-hidden min-w-0">
-            <div className="w-6 h-6 rounded-full bg-[#E0533C] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 shadow-xs transition-transform group-hover:scale-105">
+            <div className="w-6 h-6 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 border border-[#2E2E2F] shadow-xs transition-transform group-hover:scale-105">
               {userInitials}
             </div>
             <div className="flex flex-col min-w-0">
@@ -219,7 +219,7 @@ export function ProfileDockNav({
                   isMenuOpen && "scale-105 border-neutral-400 bg-white shadow-sm"
                 )}
               >
-                <div className="w-6 h-6 rounded-full bg-[#E0533C] text-white flex items-center justify-center text-[10px] font-semibold shadow-xs">
+                <div className="w-6 h-6 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold border border-[#2E2E2F] shadow-xs">
                   {userInitials}
                 </div>
               </button>

@@ -5,14 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
 
-// ─── Icons from IconMCP ───────────────────────────────────────────────────────
-import {
-  BookOpen,
-} from "@/components/ui/icons";
-
-// ─── Shadcn UI Components ─────────────────────────────────────────────────────
-import { Badge } from "@/components/ui/badge";
-
 // ─── Sidebar Dock Menu (MiniMax Layout) ────────────────────────────────────────
 import {
   SidebarDockMenu,
@@ -127,8 +119,6 @@ function ChatBubble({ message }: { message: Message }) {
     );
   }
 
-  const hasSources = message.sources && message.sources.length > 0;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -143,32 +133,6 @@ function ChatBubble({ message }: { message: Message }) {
           textClassName="text-sm font-normal text-[#171717] leading-relaxed tracking-normal break-words"
           duration={0.35}
         />
-
-        {/* Verified Knowledge Sources */}
-        {hasSources && (
-          <div className="mt-2 pt-2.5 border-t border-[#EDEDED] flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium text-[#666666] flex items-center gap-1.5">
-              <BookOpen size={14} className="text-[#171717]" />
-              Sumber Informasi Terverifikasi:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {message.sources!.map((s, idx) => (
-                <Badge
-                  key={idx}
-                  variant="outline"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F7F7F8] border-[#EDEDED] text-[11px] text-[#262626] font-normal"
-                  title={s.title}
-                >
-                  <span className="font-semibold text-[#171717]">
-                    {s.school}
-                  </span>
-                  <span className="text-[#D4D4D4]">•</span>
-                  <span className="text-[#666666]">{s.category}</span>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center justify-end pt-1">
           <span className="text-[10px] text-[#8C8C8C] font-normal">

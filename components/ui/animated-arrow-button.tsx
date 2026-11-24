@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface AnimatedArrowButtonProps extends HTMLMotionProps<"button"> {
   text?: string;
-  variant?: "white" | "black" | "danger-white";
+  variant?: "dark" | "black" | "white";
   icon?: React.ReactNode;
 }
 
@@ -38,7 +38,7 @@ export const AnimatedArrowButton = React.forwardRef<
   (
     {
       text = "Keluar (Logout)",
-      variant = "white",
+      variant = "dark",
       className,
       onClick,
       disabled,
@@ -46,8 +46,8 @@ export const AnimatedArrowButton = React.forwardRef<
     },
     ref
   ) => {
-    // Styling warna putih sesuai permintaan user ("jadikan warna nya putih")
-    const isWhite = variant === "white" || variant === "danger-white";
+    // Sesuai .stitch/DESIGN.md: Strict monochrome palette (#0A0A0B, #141515, #171717, #2E2E2F, #FFFFFF)
+    const isDark = variant === "dark" || variant === "black";
 
     return (
       <motion.button
@@ -60,10 +60,10 @@ export const AnimatedArrowButton = React.forwardRef<
         onClick={onClick}
         disabled={disabled}
         className={cn(
-          "relative flex items-center justify-center overflow-hidden w-full h-10 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-all duration-200",
-          isWhite
-            ? "bg-white text-[#DC3341] border border-[#EDEDED] shadow-[0px_1px_2px_rgba(0,0,0,0.04)] hover:border-red-200 hover:bg-red-50/50 hover:shadow-[0px_2px_8px_rgba(220,51,65,0.08)]"
-            : "bg-[#171717] text-white border border-[#2E2E2F] shadow-sm hover:bg-black",
+          "relative flex items-center justify-center overflow-hidden w-full h-10 px-4 py-2 rounded-full text-xs font-medium cursor-pointer select-none transition-all duration-200",
+          isDark
+            ? "bg-[#171717] hover:bg-black text-[#FFFFFF] border border-[#2E2E2F] shadow-xs hover:border-[#3F3F3F]"
+            : "bg-white hover:bg-[#F5F5F5] text-[#171717] border border-[#2E2E2F] shadow-xs hover:border-[#171717]",
           disabled && "opacity-50 cursor-not-allowed pointer-events-none",
           className
         )}

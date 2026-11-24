@@ -23,21 +23,11 @@ export function PreloaderLoadScreen({
   const prevPathname = useRef(pathname);
 
   // Phase: "idle" | "closing" | "opening"
-  const [phase, setPhase] = useState<"idle" | "closing" | "opening">("opening");
-  const [isActive, setIsActive] = useState(true);
+  // Hilangkan initial scroll / load reveal: mulai dalam status "idle" dan isActive: false
+  const [phase, setPhase] = useState<"idle" | "closing" | "opening">("idle");
+  const [isActive, setIsActive] = useState(false);
 
-  // 1. Initial Page Load Reveal
-  useEffect(() => {
-    setIsActive(true);
-    setPhase("opening");
-    const timer = setTimeout(() => {
-      setIsActive(false);
-      setPhase("idle");
-    }, 1100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 2. Deteksi perubahan rute halaman (URL change)
+  // 1. Deteksi perubahan rute halaman (URL change)
   useEffect(() => {
     if (prevPathname.current !== pathname) {
       prevPathname.current = pathname;
@@ -47,7 +37,7 @@ export function PreloaderLoadScreen({
       const timer = setTimeout(() => {
         setIsActive(false);
         setPhase("idle");
-      }, 1100);
+      }, 900);
 
       return () => clearTimeout(timer);
     }

@@ -219,7 +219,7 @@ export function SignupForm({
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#171717] hover:bg-black text-white font-medium rounded-full h-11 text-sm border border-[#171717] shadow-none cursor-pointer transition-colors mt-3"
+                className="w-full bg-[#171717] hover:bg-black text-white font-medium rounded-full h-11 text-sm border border-[#2E2E2F] shadow-xs hover:border-[#3F3F3F] cursor-pointer transition-colors mt-3"
               >
                 {isLoading ? (
                   <>
