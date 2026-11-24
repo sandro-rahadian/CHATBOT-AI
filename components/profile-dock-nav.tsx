@@ -111,21 +111,7 @@ export function ProfileDockNav({
 
   return (
     <div ref={menuRef} className="relative w-full">
-      {/* ── Backdrop Overlay ── */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={() => setMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Framer MorphedMenu Popup: Strictly only Logout (or Login) Button ── */}
+      {/* ── Framer MorphedMenu Popup: Strictly only Logout (or Login) Button (Tanpa Blur Backdrop) ── */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
