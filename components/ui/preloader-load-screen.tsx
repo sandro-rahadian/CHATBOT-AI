@@ -16,7 +16,7 @@ interface PreloaderLoadScreenProps {
 const framerEase = [1, 0, 0.56, 1] as const;
 
 export function PreloaderLoadScreen({
-  fill = "rgb(255, 47, 0)", // Default fill dari Framer (or KeraVokasi orange-red)
+  fill = "#0A0A0B", // Sesuai .stitch/DESIGN.md: Canvas / Background `#0A0A0B`
 }: PreloaderLoadScreenProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -141,12 +141,12 @@ export function PreloaderLoadScreen({
               backgroundColor: fill,
               transformOrigin: phase === "closing" ? "bottom" : "top",
             }}
-            className="relative h-full w-[20%] flex-none overflow-hidden border-l border-white/20 first:border-l-0"
+            className="relative h-full w-[20%] flex-none overflow-hidden border-l border-[#2E2E2F] first:border-l-0"
           />
         );
       })}
 
-      {/* Logo & Branding KeraVokasi di tengah layar saat tertutup */}
+      {/* Logo & Branding KeraVokasi di tengah layar saat tertutup (Monochrome Palette dari DESIGN.md) */}
       <AnimatePresence>
         {phase === "closing" && (
           <motion.div
@@ -156,11 +156,11 @@ export function PreloaderLoadScreen({
             transition={{ duration: 0.2 }}
             className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 text-white"
           >
-            <div className="flex items-center gap-3 bg-black/15 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/20 shadow-2xl">
-              <div className="w-8 h-8 rounded-xl bg-white text-[#E0533C] flex items-center justify-center font-bold text-sm shadow-md">
+            <div className="flex items-center gap-3 bg-[#141515] px-5 py-2.5 rounded-2xl border border-[#2E2E2F] shadow-2xl">
+              <div className="w-8 h-8 rounded-xl bg-white text-[#0A0A0B] flex items-center justify-center font-bold text-sm shadow-sm">
                 KV
               </div>
-              <span className="text-lg font-bold tracking-tight text-white drop-shadow-sm">
+              <span className="text-lg font-bold tracking-tight text-[#FFFFFF]">
                 KeraVokasi
               </span>
             </div>
