@@ -14,6 +14,7 @@ import {
 
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { CurvedCarousel } from "@/components/ui/curved-carousel";
+import { useSmoothScroll } from "@/components/ui/smooth-scroll";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ export default function ChatPage() {
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mainScrollRef = useSmoothScroll<HTMLElement>();
 
   // RBAC State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -477,7 +479,10 @@ export default function ChatPage() {
       />
 
       {/* ── Main Workbench Canvas ── */}
-      <main className="flex-1 h-full bg-[#FAFAFA] flex flex-col justify-between relative overflow-y-auto">
+      <main
+        ref={mainScrollRef}
+        className="flex-1 h-full bg-[#FAFAFA] flex flex-col justify-between relative overflow-y-auto chat-scroll"
+      >
         {/* Top Right Header Controls */}
         <header className="w-full flex justify-end items-center px-6 py-4 gap-2 absolute top-0 left-0 right-0 pointer-events-none z-10">
           <div className="pointer-events-auto flex items-center gap-2">

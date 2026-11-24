@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PreloaderLoadScreen } from "@/components/ui/preloader-load-screen";
+import { SmoothScroll } from "@/components/ui/smooth-scroll";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#171717]">
         <PreloaderLoadScreen />
+        <SmoothScroll />
         <TooltipProvider>
           {children}
         </TooltipProvider>
