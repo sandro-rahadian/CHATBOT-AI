@@ -268,12 +268,7 @@ export function SidebarDockMenu({
 
               {/* Chat History List */}
               <div className="flex flex-col gap-0.5 overflow-y-auto pr-1 flex-1 min-h-0">
-                {conversations.length === 0 ? (
-                  <div className="p-3 text-center border border-dashed border-[#E5E5E5] rounded-lg my-auto">
-                    <p className="text-[11px] text-[#8C8C8C]">Belum ada sesi tugas</p>
-                    <p className="text-[10px] text-[#A3A3A3] mt-0.5">Mulai dengan 'New task'</p>
-                  </div>
-                ) : (
+                {conversations.length > 0 &&
                   conversations.map((conv) => {
                     const isActive = conv.id === activeConversationId;
                     return (
@@ -308,8 +303,7 @@ export function SidebarDockMenu({
                         </button>
                       </div>
                     );
-                  })
-                )}
+                  })}
               </div>
             </div>
           )}

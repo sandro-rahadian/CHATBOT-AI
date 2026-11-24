@@ -15,6 +15,7 @@ import {
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { CurvedCarousel } from "@/components/ui/curved-carousel";
 import { useSmoothScroll } from "@/components/ui/smooth-scroll";
+import { EyeTracker } from "@/components/ui/eye-tracker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ interface Message {
   isError?: boolean;
 }
 
-// ─── TypingIndicator ──────────────────────────────────────────────────────────
+// ─── TypingIndicator (Eyetracker AI Loading Animation) ──────────────────────
 
 function TypingIndicator() {
   return (
@@ -46,17 +47,33 @@ function TypingIndicator() {
       transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
       className="max-w-[80%] sm:max-w-[70%]"
     >
-      <div className="inline-flex bg-white border border-[#EDEDED] rounded-2xl rounded-tl-sm px-4 py-3 items-center gap-1.5 shadow-xs">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-[#9E9E9E] animate-bounce"
-            style={{
-              animationDelay: i === 0 ? "-0.3s" : i === 1 ? "-0.15s" : "0s",
-              animationDuration: "0.9s",
-            }}
-          />
-        ))}
+      <div className="inline-flex items-center gap-3 bg-white border border-[#EDEDED] rounded-2xl rounded-tl-sm px-3.5 py-2 shadow-xs">
+        <EyeTracker
+          size={32}
+          shape="Pill"
+          eyes="Slant"
+          bodyColor="#F5F5F7"
+          eyeColor="#171717"
+          behaviorMode="Follow Cursor"
+          naturalBlinking={true}
+          followSpeed={65}
+          bounce={35}
+        />
+        <div className="flex items-center gap-1.5 pr-1">
+          <span className="text-xs font-medium text-[#737373]">KeraVokasi sedang berpikir</span>
+          <span className="flex items-center gap-0.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="w-1 h-1 rounded-full bg-[#A3A3A3] animate-pulse"
+                style={{
+                  animationDelay: `${i * 0.25}s`,
+                  animationDuration: "1.2s",
+                }}
+              />
+            ))}
+          </span>
+        </div>
       </div>
     </motion.div>
   );
@@ -155,6 +172,8 @@ export default function ChatPage() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isUserScrolledUp = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mainScrollRef = useSmoothScroll<HTMLElement>();
 
@@ -257,6 +276,7 @@ export default function ChatPage() {
             )
           );
           setActiveConversationId(convId);
+          isUserScrolledUp.current = false;
         }
       } catch (e) {
         console.error("Gagal memuat pesan percakapan:", e);
@@ -273,6 +293,7 @@ export default function ChatPage() {
     setMessages([]);
     setError(null);
     setInputValue("");
+    isUserScrolledUp.current = false;
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
@@ -337,9 +358,21 @@ export default function ChatPage() {
     setActiveConversationId(null);
   };
 
-  // Auto-scroll
+  // Scroll handler: Detect if user intentionally scrolled up to read history
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    isUserScrolledUp.current = scrollHeight - scrollTop - clientHeight > 100;
+  };
+
+  // Safe Auto-scroll without fighting user manual scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isUserScrolledUp.current && chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, isLoading]);
 
   const isGuest =
@@ -347,6 +380,7 @@ export default function ChatPage() {
     (!currentUser || currentUser.role === "guest");
 
   const handleSend = async (userMessage: string) => {
+    isUserScrolledUp.current = false;
     const activeToken =
       apiToken ||
       (typeof window !== "undefined" ? localStorage.getItem("chat_token") : null);
@@ -480,13 +514,17 @@ export default function ChatPage() {
 
       {/* ── Main Workbench Canvas ── */}
       <main
-        ref={mainScrollRef}
-        className="flex-1 h-full bg-[#FAFAFA] flex flex-col justify-between relative overflow-y-auto chat-scroll"
+        ref={messages.length === 0 ? mainScrollRef : undefined}
+        data-lenis-prevent
+        className={`flex-1 h-full bg-[#FAFAFA] relative ${
+          messages.length === 0
+            ? "overflow-y-auto chat-scroll flex flex-col justify-between"
+            : "overflow-hidden flex flex-col"
+        }`}
       >
-        {/* Center Canvas Stage */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
-          {messages.length === 0 ? (
-            /* ── MiniMax Code Hero & Empty State ── */
+        {messages.length === 0 ? (
+          /* ── MiniMax Code Hero & Empty State ── */
+          <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
             <div className="w-full flex flex-col items-center justify-center">
               {/* Primary Hero Title with Codigo Staggered Character Slide-Up Transition */}
               <motion.h1
@@ -519,7 +557,7 @@ export default function ChatPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 120, damping: 16 }}
-                className="w-full max-w-[720px] bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] p-4 flex flex-col justify-between min-h-[142px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#171717] relative"
+                className="w-full max-w-[720px] bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 p-4 flex flex-col justify-between min-h-[142px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1 relative group outline-none"
               >
                 {/* Editable Prompt Area */}
                 <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
@@ -531,7 +569,7 @@ export default function ChatPage() {
                     disabled={isLoading}
                     placeholder="Ask anything or use / to use Skill..."
                     rows={2}
-                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 resize-none font-normal leading-relaxed outline-none"
+                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
                   />
                 </div>
 
@@ -657,22 +695,8 @@ export default function ChatPage() {
                     </AnimatePresence>
                   </div>
 
-                  {/* Right: Model Selector + Codigo Animated Send CTA */}
+                  {/* Right: Codigo Animated Send CTA */}
                   <div className="flex items-center gap-2">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors cursor-pointer"
-                      title="Ganti Model AI"
-                    >
-                      <span className="font-normal text-[#404040]">SMK1.1-Flash</span>
-                      <span className="text-[#8C8C8C] text-[11px]">default</span>
-                      <svg className="w-3 h-3 text-[#8C8C8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                      </svg>
-                    </motion.button>
-
                     <AnimatePresence mode="wait">
                       {inputValue.trim().length > 0 ? (
                         <motion.button
@@ -819,10 +843,18 @@ export default function ChatPage() {
                 />
               </div>
             </div>
-          ) : (
-            /* ── Conversation Stream State ── */
-            <div className="w-full flex-1 flex flex-col max-w-[720px] mx-auto min-h-0">
-              <div className="flex-1 overflow-y-auto chat-scroll flex flex-col gap-4 py-4 pr-1">
+          </div>
+        ) : (
+          /* ── Conversation Stream State (Single Stream + Floating Docked Omnibox) ── */
+          <>
+            {/* Scrollable Conversation Stream */}
+            <div
+              ref={chatContainerRef}
+              onScroll={handleScroll}
+              data-lenis-prevent
+              className="flex-1 w-full overflow-y-auto chat-scroll px-4 pt-6"
+            >
+              <div className="w-full max-w-[760px] mx-auto flex flex-col gap-4 pb-48">
                 {messages.map((msg) => (
                   <ChatBubble key={msg.id} message={msg} />
                 ))}
@@ -831,22 +863,33 @@ export default function ChatPage() {
                   {isLoading && <TypingIndicator key="typing" />}
                 </AnimatePresence>
 
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-2" />
               </div>
+            </div>
 
-              {/* Sticky MiniMax Omnibox at bottom of conversation with Codigo Transitions */}
-              <div className="w-full bg-white rounded-2xl border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.04)] p-3.5 flex flex-col justify-between min-h-[110px] mt-2 relative transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#171717]">
-                <textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={isLoading}
-                  placeholder="Ask a follow up question..."
-                  rows={2}
-                  className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 resize-none font-normal leading-relaxed outline-none"
-                />
+            {/* ── Floating Chat Omnibox (Hover & Melayang Mengikuti Screen) ── */}
+            <div className="absolute bottom-5 left-0 right-0 z-30 pointer-events-none px-4 flex justify-center">
+              <motion.div
+                initial={{ y: 24, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 24 }}
+                className="pointer-events-auto w-full max-w-[760px] bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.13)] hover:-translate-y-1.5 p-3.5 flex flex-col justify-between min-h-[114px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.14)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1.5 relative group outline-none"
+              >
+                {/* Editable Prompt Area */}
+                <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
+                  <textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isLoading}
+                    placeholder="Ask a follow up question..."
+                    rows={2}
+                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
+                  />
+                </div>
 
+                {/* Omnibox Bottom Toolbar Row */}
                 <div className="flex items-center justify-between pt-2 border-t border-transparent">
                   <div className="relative">
                     <motion.button
@@ -858,24 +901,60 @@ export default function ChatPage() {
                         setShowAttachmentMenu((prev) => !prev);
                       }}
                       className="w-8 h-8 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-colors cursor-pointer"
+                      title="Add attachments or skills"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                       </svg>
                     </motion.button>
+
+                    {/* Popover Menu matching Reference Screen */}
+                    <AnimatePresence>
+                      {showAttachmentMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                          transition={{ duration: 0.14, ease: "easeOut" }}
+                          className="absolute bottom-10 left-0 w-48 bg-white rounded-xl shadow-lg border border-[#EDEDED] py-1 text-xs text-[#262626] z-50"
+                        >
+                          <div
+                            onClick={() => setShowAttachmentMenu(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.8"
+                              />
+                            </svg>
+                            <span>Add files or photos</span>
+                          </div>
+                          <div
+                            onClick={() => {
+                              setShowAttachmentMenu(false);
+                              setInputValue("/skill jurusan ");
+                            }}
+                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                              </svg>
+                              <span>Skills</span>
+                            </div>
+                            <svg className="w-3 h-3 text-[#A3A3A3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                            </svg>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors cursor-pointer"
-                    >
-                      <span className="font-normal text-[#404040]">SMK1.1-Flash</span>
-                      <span className="text-[#8C8C8C] text-[11px]">default</span>
-                    </motion.button>
-
                     <AnimatePresence mode="wait">
                       {inputValue.trim().length > 0 ? (
                         <motion.button
@@ -916,13 +995,13 @@ export default function ChatPage() {
                     </AnimatePresence>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Empty footer spacer to preserve optical balance */}
-        <div className="h-6 pointer-events-none" />
+        {messages.length === 0 && <div className="h-6 pointer-events-none" />}
       </main>
     </div>
   );

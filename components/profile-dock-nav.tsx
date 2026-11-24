@@ -184,7 +184,7 @@ export function ProfileDockNav({
         >
           {/* User Avatar + Name */}
           <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-            <div className="w-7 h-7 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 border border-[#2E2E2F] shadow-xs transition-transform group-hover:scale-105">
+            <div className="w-7 h-7 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 border border-[#2E2E2F] shadow-xs">
               {userInitials}
             </div>
             <span

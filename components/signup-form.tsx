@@ -150,7 +150,7 @@ export function SignupForm({
                   placeholder="Contoh: Rian Pratama"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
+                  className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -166,7 +166,7 @@ export function SignupForm({
                   placeholder="Contoh: rian_siswa"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
+                  className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -177,7 +177,7 @@ export function SignupForm({
                   Asal Sekolah (Opsional)
                 </FieldLabel>
                 <Select value={schoolId} onValueChange={setSchoolId}>
-                  <SelectTrigger className="w-full bg-white border border-[#171717] text-sm text-[#171717] rounded-full h-11 px-4 focus:border-black focus:ring-1 focus:ring-black transition-colors">
+                  <SelectTrigger className="w-full bg-white border border-[#D4D4D8] text-sm text-[#171717] rounded-full h-11 px-4 focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none transition-colors">
                     <SelectValue placeholder="Pilih sekolah" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-[#171717] text-xs text-[#171717] rounded-xl shadow-xl">
@@ -211,7 +211,7 @@ export function SignupForm({
                   placeholder="Minimal 4 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
+                  className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>

@@ -129,7 +129,7 @@ export function LoginForm({
                   placeholder="Contoh: budi_siswa / username Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
+                  className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -146,7 +146,7 @@ export function LoginForm({
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
+                  className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                 />
               </Field>
 

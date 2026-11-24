@@ -23,14 +23,22 @@ export function SmoothScroll() {
 
     const lenis = new Lenis({
       autoRaf: true,
-      duration: 1.2,
+      duration: 1.0,
       easing: smoothEasing,
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-      allowNestedScroll: true,
+      touchMultiplier: 1.2,
+      prevent: (node) => {
+        // Never hijack or block scrolling inside scrollable chat containers
+        return Boolean(
+          node.closest?.("[data-lenis-prevent]") ||
+          node.closest?.(".chat-scroll") ||
+          node.closest?.("main") ||
+          node.closest?.("[data-scrollable]")
+        );
+      },
     });
 
     return () => {
@@ -64,19 +72,32 @@ export function useSmoothScroll<T extends HTMLElement = HTMLElement>(
       content: (element.firstElementChild as HTMLElement) || element,
       eventsTarget: element,
       autoRaf: true,
-      duration: 1.2,
+      duration: 1.0,
       easing: smoothEasing,
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-      allowNestedScroll: true,
+      touchMultiplier: 1.2,
+      prevent: (node) => {
+        return Boolean(node.closest?.("[data-lenis-prevent]"));
+      },
     });
 
     lenisRef.current = lenis;
 
+    // Synchronize Lenis bounds with dynamic content changes (messages streaming, bubbles adding, etc.)
+    const resizeObserver = new ResizeObserver(() => {
+      lenis.resize();
+    });
+
+    resizeObserver.observe(element);
+    if (element.firstElementChild) {
+      resizeObserver.observe(element.firstElementChild);
+    }
+
     return () => {
+      resizeObserver.disconnect();
       lenis.destroy();
       lenisRef.current = null;
     };
