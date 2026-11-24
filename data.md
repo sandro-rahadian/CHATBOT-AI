@@ -367,5 +367,41 @@
     "title": "Jurusan Bangunan Sipil (DPIB & KJIJ)",
     "content": "Meliputi Desain Pemodelan dan Informasi Bangunan (DPIB - arsitektur dan gambar teknik) serta Konstruksi Jalan, Irigasi dan Jembatan (KJIJ - teknik konstruksi sipil).",
     "keywords": "dpib kjij bangunan sipil arsitektur konstruksi gambar teknik smkn 6 smk 6 malang"
+  },
+  {
+    "id": 42,
+    "school_id": 2,
+    "school_name": "SMK Negeri 4 Malang",
+    "category": "Pendaftaran",
+    "title": "Informasi PPDB SMK Negeri 4 Malang",
+    "content": "Pendaftaran Peserta Didik Baru (PPDB) SMK Negeri 4 Malang mengikuti sistem seleksi terpusat PPDB SMK Negeri Jawa Timur secara daring melalui portal https://ppdb.jatimprov.go.id. Jalur pendaftaran meliputi: Jalur Afirmasi, Jalur Perpindahan Tugas Orang Tua, Jalur Prestasi Hasil Lomba, Jalur Prestasi Nilai Akademik, dan Jalur Zonasi. Pelaksanaan pendaftaran dan verifikasi berkas biasanya berlangsung pada bulan Mei - Juli. Informasi persyaratan khusus dan pengumuman sekolah dapat dipantau di situs resmi smkn4malang.sch.id.",
+    "keywords": "ppdb pendaftaran daftar smkn 4 smk 4 grafika syarat jalur masuk ppdb jatim jatimprov jadwal online"
+  },
+  {
+    "id": 43,
+    "school_id": 3,
+    "school_name": "SMK Negeri 5 Malang",
+    "category": "Pendaftaran",
+    "title": "Informasi PPDB SMK Negeri 5 Malang",
+    "content": "Pendaftaran Peserta Didik Baru (PPDB) SMK Negeri 5 Malang dilaksanakan serentak melalui portal resmi PPDB Jawa Timur di https://ppdb.jatimprov.go.id. Calon peserta didik dapat mendaftar melalui jalur Afirmasi, Prestasi Hasil Lomba, Prestasi Nilai Akademik, atau Zonasi SMK. Informasi kelengkapan berkas dan update tahapan PPDB dapat diakses melalui portal resmi Dinas Pendidikan Jatim serta laman smkn5malang.sch.id.",
+    "keywords": "ppdb pendaftaran daftar smkn 5 smk 5 malang syarat jalur masuk ppdb jatim jatimprov jadwal online"
+  },
+  {
+    "id": 44,
+    "school_id": 4,
+    "school_name": "SMK Negeri 3 Malang",
+    "category": "Pendaftaran",
+    "title": "Informasi PPDB SMK Negeri 3 Malang",
+    "content": "Pendaftaran Peserta Didik Baru (PPDB) SMK Negeri 3 Malang mengikuti jalur resmi seleksi PPDB SMK Negeri Jawa Timur secara online melalui situs https://ppdb.jatimprov.go.id. Seleksi mencakup Jalur Afirmasi, Jalur Nilai Prestasi Akademik rapor SMP/MTs, Jalur Prestasi Lomba, serta Jalur Zonasi. Informasi tata cara dan jadwal seleksi diumumkan setiap tahun ajaran baru di portal ppdb.jatimprov.go.id dan website smkn3malang.sch.id.",
+    "keywords": "ppdb pendaftaran daftar smkn 3 smk 3 malang boga busana syarat jalur masuk ppdb jatim jatimprov jadwal online"
+  },
+  {
+    "id": 45,
+    "school_id": 5,
+    "school_name": "SMK Negeri 6 Malang",
+    "category": "Pendaftaran",
+    "title": "Informasi PPDB SMK Negeri 6 Malang",
+    "content": "Pendaftaran Peserta Didik Baru (PPDB) SMK Negeri 6 Malang dilakukan serentak secara online melalui sistem PPDB Jawa Timur di https://ppdb.jatimprov.go.id. Jalur pendaftaran meliputi Jalur Afirmasi, Jalur Perpindahan Tugas Orang Tua, Jalur Prestasi Lomba, Jalur Prestasi Nilai Akademik, dan Jalur Zonasi. Pengumuman tahapan dan jadwal lengkap dapat dipantau di portal resmi PPDB Jatim dan smkn6malang.sch.id.",
+    "keywords": "ppdb pendaftaran daftar smkn 6 smk 6 malang syarat jalur masuk ppdb jatim jatimprov jadwal online"
   }
 ]

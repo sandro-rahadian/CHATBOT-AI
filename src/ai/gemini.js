@@ -77,7 +77,7 @@ export function toGeminiContents(history, message) {
 export function isRetryable(err) {
   if (err?.code === "TIMEOUT") return true;
   if (typeof err?.status === "number") return [500, 502, 503, 504].includes(err.status);
-  return /fetch failed|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN/i.test(err?.message ?? "");
+  return /fetch failed|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|high demand|overloaded/i.test(err?.message ?? "");
 }
 
 /**
@@ -148,6 +148,8 @@ export function createGeminiGenerator(defaultSystemInstruction) {
   };
 }
 
+const FALLBACK_MODEL = MODEL_NAME === "gemini-3.5-flash" ? "gemini-3.5-flash-lite" : "gemini-3.5-flash";
+
 /**
  * Autonomous Gemini Database Agent Generator dengan Function Calling (Text-to-SQL).
  * Jika database MySQL aktif, Gemini memahami skema relasional tabel dan secara mandiri
@@ -174,8 +176,6 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
       modelOptions.tools = databaseAgentTools;
     }
 
-    const model = genAI.getGenerativeModel(modelOptions);
-
     const controller = new AbortController();
     let timer;
     const timeoutPromise = new Promise((_, reject) => {
@@ -188,7 +188,12 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
     });
 
     try {
-      const agentExecution = async () => {
+      const executeWithModel = async (activeModelName) => {
+        const model = genAI.getGenerativeModel({
+          ...modelOptions,
+          model: activeModelName,
+        });
+
         const currentContents = [...contents];
         let turns = 0;
         const maxTurns = 3;
@@ -249,6 +254,19 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
         });
         const finalResult = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
         return extractResponseText(finalResult.response);
+      };
+
+      const agentExecution = async () => {
+        try {
+          return await executeWithModel(MODEL_NAME);
+        } catch (err) {
+          const isOverloaded = err?.status === 503 || /high demand|overloaded/i.test(err?.message ?? "");
+          if (isOverloaded && MODEL_NAME !== FALLBACK_MODEL) {
+            console.warn(`[Gemini] Model ${MODEL_NAME} sibuk (${err?.status ?? "overloaded"}), otomatis mencoba model cadangan ${FALLBACK_MODEL}...`);
+            return await executeWithModel(FALLBACK_MODEL);
+          }
+          throw err;
+        }
       };
 
       return await Promise.race([agentExecution(), timeoutPromise]);

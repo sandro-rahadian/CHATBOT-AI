@@ -679,3 +679,67 @@ test("cleanMarkdownOutput: merapikan bullet list, loose list, dan menghapus rong
   assert.ok(!cleaned.includes("\n\n\n"), "Tidak boleh ada lebih dari 2 newline beruntun");
 });
 
+test("Context Window Session: Permintaan berulang dalam 1 session hanya menghasilkan 1 percakapan di riwayat", async () => {
+  const siswaToken = "token-siswa-123";
+  const customSessionId = crypto.randomUUID();
+
+  // Hitung jumlah percakapan awal
+  const resBefore = await fetch(`${base}/conversations`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  const { conversations: convsBefore } = await resBefore.json();
+  const initialCount = convsBefore.length;
+
+  // Request 1 dalam context window
+  const res1 = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-token": siswaToken },
+    body: JSON.stringify({
+      conversation_id: customSessionId,
+      message: "Pertanyaan pertama di sesi ini",
+    }),
+  });
+  assert.equal(res1.status, 200);
+  const data1 = await res1.json();
+  assert.equal(data1.conversation_id, customSessionId);
+
+  // Request 2 dalam context window yang sama
+  const res2 = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-token": siswaToken },
+    body: JSON.stringify({
+      conversation_id: customSessionId,
+      message: "Pertanyaan kedua di sesi yang sama",
+    }),
+  });
+  assert.equal(res2.status, 200);
+  const data2 = await res2.json();
+  assert.equal(data2.conversation_id, customSessionId);
+
+  // Request 3 dalam context window yang sama
+  const res3 = await fetch(`${base}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-token": siswaToken },
+    body: JSON.stringify({
+      conversation_id: customSessionId,
+      message: "Pertanyaan ketiga di sesi yang sama",
+    }),
+  });
+  assert.equal(res3.status, 200);
+
+  // Periksa list riwayat: Hanya bertambah 1 percakapan (bukan 3!)
+  const resAfter = await fetch(`${base}/conversations`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  const { conversations: convsAfter } = await resAfter.json();
+  assert.equal(convsAfter.length, initialCount + 1, "Riwayat percakapan hanya boleh bertambah 1 untuk satu context window");
+
+  // Periksa detail: Memiliki 6 pesan (3 user + 3 assistant)
+  const resDetail = await fetch(`${base}/conversations/${customSessionId}`, {
+    headers: { "x-api-token": siswaToken },
+  });
+  assert.equal(resDetail.status, 200);
+  const { conversation } = await resDetail.json();
+  assert.equal(conversation.messages.length, 6, "Seluruh 6 pesan harus tersimpan dalam 1 thread percakapan");
+});
+

@@ -290,8 +290,9 @@ export function createApp({
       return res.status(401).json({ error: "Harap login untuk membuat percakapan baru." });
     }
 
-    const { title } = req.body ?? {};
+    const { title, id } = req.body ?? {};
     const conversation = await createConversation({
+      id: id || undefined,
       userId: userAccess.user.id,
       title: title || "Obrolan Baru",
     });
@@ -398,6 +399,7 @@ export function createApp({
       });
     }
 
+    let activeConv = null;
     try {
       const contents = toGeminiContents(parsed.history, parsed.message);
       const cached = getCachedKnowledgeItems();
@@ -432,7 +434,6 @@ export function createApp({
       }
 
       // 5. Hubungkan ke sesi percakapan jika user terautentikasi
-      let activeConv = null;
       if (user.id) {
         if (parsed.conversation_id) {
           const existing = await getConversationWithMessages(parsed.conversation_id, user.id);
@@ -442,6 +443,7 @@ export function createApp({
         }
         if (!activeConv) {
           activeConv = await createConversation({
+            id: parsed.conversation_id || undefined,
             userId: user.id,
             title: parsed.message.slice(0, 45),
           });
@@ -491,7 +493,11 @@ export function createApp({
     } catch (err) {
       console.error("[Gemini error]", err?.message ?? err);
       const { status, error } = toClientError(err);
-      return res.status(status).json({ error });
+      const convId = activeConv ? activeConv.id : (parsed?.conversation_id || null);
+      return res.status(status).json({
+        error,
+        ...(convId ? { conversation_id: convId } : {}),
+      });
     }
   });
 

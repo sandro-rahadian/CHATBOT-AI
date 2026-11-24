@@ -41,8 +41,8 @@ export async function initConversationTables(pool = getDbPool()) {
 /**
  * Membuat sesi percakapan baru untuk user tertentu.
  */
-export async function createConversation({ userId = null, title = "Obrolan Baru" } = {}) {
-  const convId = crypto.randomUUID();
+export async function createConversation({ id = null, userId = null, title = "Obrolan Baru" } = {}) {
+  const convId = id && typeof id === "string" && id.trim() !== "" ? id.trim() : crypto.randomUUID();
   const cleanTitle = (title || "Obrolan Baru").trim().slice(0, 100);
   const now = new Date();
 
@@ -94,7 +94,7 @@ export async function getConversationsByUser(userId) {
   // Fallback in-memory jika offline / DB tidak terhubung
   const list = [];
   for (const conv of inMemoryConversations.values()) {
-    if (conv.user_id === userId) {
+    if (String(conv.user_id) === String(userId)) {
       list.push(conv);
     }
   }
@@ -114,7 +114,7 @@ export async function getConversationWithMessages(conversationId, userId) {
       );
       if (Array.isArray(convRows) && convRows.length > 0) {
         const conv = convRows[0];
-        if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+        if (userId !== null && conv.user_id !== null && String(conv.user_id) !== String(userId)) {
           return { error: "forbidden", status: 403 };
         }
         const [msgRows] = await pool.query(
@@ -136,7 +136,7 @@ export async function getConversationWithMessages(conversationId, userId) {
   if (!conv) {
     return { error: "not_found", status: 404 };
   }
-  if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+  if (userId !== null && conv.user_id !== null && String(conv.user_id) !== String(userId)) {
     return { error: "forbidden", status: 403 };
   }
   const msgs = inMemoryMessages.get(conversationId) || [];
@@ -199,7 +199,7 @@ export async function deleteConversation(conversationId, userId) {
       );
       if (Array.isArray(convRows) && convRows.length > 0) {
         const conv = convRows[0];
-        if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+        if (userId !== null && conv.user_id !== null && String(conv.user_id) !== String(userId)) {
           return { error: "forbidden", status: 403 };
         }
         await pool.query("DELETE FROM conversation_messages WHERE conversation_id = ?", [conversationId]);
@@ -212,7 +212,7 @@ export async function deleteConversation(conversationId, userId) {
 
   const conv = inMemoryConversations.get(conversationId);
   if (conv) {
-    if (userId !== null && conv.user_id !== null && conv.user_id !== userId) {
+    if (userId !== null && conv.user_id !== null && String(conv.user_id) !== String(userId)) {
       return { error: "forbidden", status: 403 };
     }
     inMemoryConversations.delete(conversationId);

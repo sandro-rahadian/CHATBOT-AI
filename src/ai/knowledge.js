@@ -264,15 +264,25 @@ export function selectRelevantKnowledge(message, items = [], userAllowedCategori
     // Pastikan setiap sekolah yang disebut pengguna mendapatkan alokasi item relevan
     const perSchoolItems = [];
     for (const kw of schoolKeywords) {
-      const matchingForSchool = scored.filter((s) => {
-        const name = (s.item.school_name || "smk telkom malang").toLowerCase();
-        if (kw === "telkom") return name.includes("telkom");
-        return name.includes(`smkn ${kw}`) || name.includes(`smk negeri ${kw}`) || name.includes(`smk ${kw}`);
-      });
-      // Ambil hingga 5 item teratas per sekolah
-      perSchoolItems.push(...matchingForSchool.slice(0, 5).map((s) => s.item));
+      const matchSchool = (name) => {
+        const n = (name || "").toLowerCase();
+        if (kw === "telkom") return n.includes("telkom");
+        return n.includes(`smk negeri ${kw}`) || n.includes(`smkn ${kw}`) || n.includes(`smk ${kw}`);
+      };
+
+      const matchingForSchool = scored.filter((s) => matchSchool(s.item.school_name));
+
+      if (matchingForSchool.length > 0) {
+        // Ambil maksimal 2 item teratas per sekolah agar prompt ringkas dan respon kilat (< 4 detik)
+        perSchoolItems.push(...matchingForSchool.slice(0, 2).map((s) => s.item));
+      } else {
+        // Fallback: jika sekolah tidak memiliki data pada kategori spesifik (misal PPDB),
+        // sertakan profil atau jurusan sekolah tersebut agar AI memiliki konteks lengkap sekolah tersebut
+        const schoolFallback = allowedItems.filter((item) => matchSchool(item.school_name));
+        perSchoolItems.push(...schoolFallback.slice(0, 2));
+      }
     }
-    const finalSelected = perSchoolItems.length > 0 ? perSchoolItems : scored.slice(0, 15).map((s) => s.item);
+    const finalSelected = perSchoolItems.length > 0 ? perSchoolItems : scored.slice(0, 8).map((s) => s.item);
     return {
       selectedItems: finalSelected,
       includeGuide,
