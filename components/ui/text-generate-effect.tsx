@@ -78,7 +78,7 @@ export const TextGenerateEffect = ({
       <motion.div
         ref={scope}
         className={cn(
-          "leading-relaxed text-[#dbdee1] flex flex-col gap-2.5",
+          "leading-relaxed text-[#171717] flex flex-col gap-2.5",
           textClassName
         )}
       >
@@ -86,45 +86,45 @@ export const TextGenerateEffect = ({
           remarkPlugins={[remarkGfm]}
           components={{
             p: ({ children }) => (
-              <p className="my-0.5 leading-relaxed text-[#dbdee1] break-words">
+              <p className="my-0.5 leading-relaxed text-[#171717] break-words">
                 {children}
               </p>
             ),
             strong: ({ children }) => (
-              <strong className="font-semibold text-white tracking-wide">
+              <strong className="font-semibold text-[#171717] tracking-normal">
                 {children}
               </strong>
             ),
             em: ({ children }) => (
-              <em className="italic text-[#e3e5e8]">{children}</em>
+              <em className="italic text-[#404040]">{children}</em>
             ),
             h1: ({ children }) => (
-              <h1 className="text-base font-bold text-white mt-2 mb-1">
+              <h1 className="text-base font-bold text-[#171717] mt-2 mb-1">
                 {children}
               </h1>
             ),
             h2: ({ children }) => (
-              <h2 className="text-sm font-bold text-white mt-1.5 mb-1">
+              <h2 className="text-sm font-bold text-[#171717] mt-1.5 mb-1">
                 {children}
               </h2>
             ),
             h3: ({ children }) => (
-              <h3 className="text-sm font-semibold text-white mt-1 mb-0.5">
+              <h3 className="text-sm font-semibold text-[#171717] mt-1 mb-0.5">
                 {children}
               </h3>
             ),
             ul: ({ children }) => (
-              <ul className="my-1 pl-4 space-y-1 list-disc list-outside marker:text-[#949ba4]">
+              <ul className="my-1 pl-4 space-y-1 list-disc list-outside marker:text-[#737373]">
                 {children}
               </ul>
             ),
             ol: ({ children }) => (
-              <ol className="my-1 pl-4 space-y-1 list-decimal list-outside marker:text-[#949ba4]">
+              <ol className="my-1 pl-4 space-y-1 list-decimal list-outside marker:text-[#737373]">
                 {children}
               </ol>
             ),
             li: ({ children }) => (
-              <li className="leading-relaxed pl-0.5 text-[#dbdee1]">
+              <li className="leading-relaxed pl-0.5 text-[#171717]">
                 {children}
               </li>
             ),
@@ -137,14 +137,14 @@ export const TextGenerateEffect = ({
                   href={href}
                   target={isTel ? undefined : "_blank"}
                   rel={isTel ? undefined : "noopener noreferrer"}
-                  className="inline-flex items-center gap-1 font-medium text-[#FFFFFF] hover:text-[#E0E0E0] underline underline-offset-4 decoration-[#5F5C5D] hover:decoration-[#FFFFFF] transition-colors cursor-pointer break-all"
+                  className="inline-flex items-center gap-1 font-medium text-[#171717] hover:text-black underline underline-offset-4 decoration-[#737373] hover:decoration-[#171717] transition-colors cursor-pointer break-all"
                 >
                   {children}
                 </a>
               );
             },
             code: ({ children }) => (
-              <code className="font-mono text-xs bg-[#1E1F1F] text-[#FFFFFF] px-1.5 py-0.5 rounded-[4px] border border-[#2E2E2F]">
+              <code className="font-mono text-xs bg-[#F5F5F5] text-[#171717] px-1.5 py-0.5 rounded-[4px] border border-[#E5E5E5]">
                 {children}
               </code>
             ),
