@@ -166,15 +166,20 @@ export function selectRelevantKnowledge(message, items = [], userAllowedCategori
   }
 
   // 2. Pertanyaan panduan/rekomendasi jurusan -> Sertakan dokumen panduan
-  const isRecommendation = /\b(rekomendasi|saran|pilih|memilih|bingung|cocok|bakat|minat|prospek|peluang kerja|gaji|perbedaan|bedanya)\b/i.test(text);
+  const isRecommendation = /\b(rekomendasi|saran|pilih|memilih|bingung|cocok|bakat|minat|prospek|peluang kerja|gaji)\b/i.test(text);
 
-  // 3. Deteksi sekolah tertentu
-  let schoolKeyword = null;
-  if (/\b(telkom|moklet)\b/i.test(text)) schoolKeyword = "telkom";
-  else if (/\b(smkn?\s*3|smk\s*3)\b/i.test(text)) schoolKeyword = "3";
-  else if (/\b(smkn?\s*4|smk\s*4|grafika)\b/i.test(text)) schoolKeyword = "4";
-  else if (/\b(smkn?\s*5|smk\s*5)\b/i.test(text)) schoolKeyword = "5";
-  else if (/\b(smkn?\s*6|smk\s*6)\b/i.test(text)) schoolKeyword = "6";
+  // 3. Deteksi sekolah tertentu (mendukung satu atau beberapa sekolah sekaligus)
+  const schoolKeywords = [];
+  if (/\b(telkom|moklet)\b/i.test(text)) schoolKeywords.push("telkom");
+  if (/\b(smkn?\s*3|smk\s*3)\b/i.test(text)) schoolKeywords.push("3");
+  if (/\b(smkn?\s*4|smk\s*4|grafika)\b/i.test(text)) schoolKeywords.push("4");
+  if (/\b(smkn?\s*5|smk\s*5)\b/i.test(text)) schoolKeywords.push("5");
+  if (/\b(smkn?\s*6|smk\s*6)\b/i.test(text)) schoolKeywords.push("6");
+
+  // Jika membandingkan beberapa sekolah atau meminta perbandingan
+  const isMultiSchool = schoolKeywords.length > 1;
+  const isComparison = isMultiSchool || /\b(bandingkan|perbedaan|bedanya|antara)\b/i.test(text);
+  const includeGuide = isRecommendation || isComparison;
 
   // 4. Deteksi kategori pertanyaan
   const detectedCategory = detectQuestionCategory(message);
@@ -186,11 +191,13 @@ export function selectRelevantKnowledge(message, items = [], userAllowedCategori
     return catOk && schoolOk;
   });
 
-  if (schoolKeyword) {
+  if (schoolKeywords.length > 0) {
     const schoolItems = allowedItems.filter((item) => {
       const name = (item.school_name || "smk telkom malang").toLowerCase();
-      if (schoolKeyword === "telkom") return name.includes("telkom");
-      return name.includes(`smkn ${schoolKeyword}`) || name.includes(`smk negeri ${schoolKeyword}`) || name.includes(`smk ${schoolKeyword}`);
+      return schoolKeywords.some((kw) => {
+        if (kw === "telkom") return name.includes("telkom");
+        return name.includes(`smkn ${kw}`) || name.includes(`smk negeri ${kw}`) || name.includes(`smk ${kw}`);
+      });
     });
     if (schoolItems.length > 0) {
       allowedItems = schoolItems;
@@ -242,11 +249,12 @@ export function selectRelevantKnowledge(message, items = [], userAllowedCategori
   });
 
   scored.sort((a, b) => b.score - a.score);
-  const topItems = scored.slice(0, 4).map((s) => s.item);
+  const maxSelected = schoolKeywords.length > 1 ? 8 : 4;
+  const topItems = scored.slice(0, maxSelected).map((s) => s.item);
 
   return {
     selectedItems: topItems,
-    includeGuide: isRecommendation,
+    includeGuide,
   };
 }
 

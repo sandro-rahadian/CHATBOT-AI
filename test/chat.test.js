@@ -650,3 +650,10 @@ test("Conversation API: Endpoint percakapan & isolasi ketat antar-user", async (
   assert.equal(resAfterDel.status, 404);
 });
 
+test("selectRelevantKnowledge: mendukung pertanyaan multi-sekolah (SMK Telkom, SMKN 4, SMKN 5)", () => {
+  const items = loadKnowledgeBase();
+  const multiResult = selectRelevantKnowledge("apa saja jurusan di smk telkom malang smk 4 malang dan smk 5 malang", items);
+  assert.equal(multiResult.includeGuide, true, "Panduan jurusan harus disertakan saat menanyakan banyak sekolah");
+  assert.ok(multiResult.selectedItems.length > 0);
+});
+

@@ -5,7 +5,7 @@ dotenv.config();
 
 export const PORT = Number(process.env.PORT) || 3001;
 export const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
-export const TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 15000;
+export const TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 30000;
 
 const parsedRetries = Number.parseInt(process.env.GEMINI_MAX_RETRIES ?? "", 10);
 export const MAX_RETRIES = Number.isNaN(parsedRetries) ? 2 : Math.max(0, parsedRetries);

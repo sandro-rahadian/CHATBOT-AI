@@ -4,6 +4,23 @@ import { MODEL_NAME, TIMEOUT_MS, MAX_MESSAGE_LENGTH, MAX_HISTORY } from "../conf
 import { buildSystemPrompt } from "./knowledge.js";
 import { databaseAgentTools } from "./tools.js";
 import { getDbSchemaDescription, executeDbQueryTool } from "../db/schema.js";
+import { getDbPool } from "../db/pool.js";
+
+/**
+ * Ekstraksi teks dari response Gemini secara aman tanpa memicu exception
+ * jika ada kandidat atau part selain teks biasa.
+ */
+function extractResponseText(response) {
+  try {
+    const t = response.text();
+    if (t && t.trim()) return t.trim();
+  } catch {
+    // response.text() throw jika ada part tanpa text
+  }
+  const parts = response.candidates?.[0]?.content?.parts || [];
+  const textParts = parts.map((p) => p.text).filter(Boolean);
+  return textParts.join("\n").trim();
+}
 
 /**
  * Validasi body request dari frontend. Return { error } atau { message, history, conversation_id }.
@@ -123,7 +140,7 @@ export function createGeminiGenerator(defaultSystemInstruction) {
     try {
       const call = model
         .generateContent({ contents }, { signal: controller.signal })
-        .then((result) => result.response.text());
+        .then((result) => extractResponseText(result.response));
       return await Promise.race([call, timeout]);
     } finally {
       clearTimeout(timer);
@@ -133,21 +150,31 @@ export function createGeminiGenerator(defaultSystemInstruction) {
 
 /**
  * Autonomous Gemini Database Agent Generator dengan Function Calling (Text-to-SQL).
- * Gemini memahami skema relasional tabel dan secara mandiri dapat mengeksekusi
- * query SELECT read-only untuk mengambil data akurat dari database MySQL sekolah.
+ * Jika database MySQL aktif, Gemini memahami skema relasional tabel dan secara mandiri
+ * dapat mengeksekusi query SELECT read-only untuk mengambil data akurat dari database MySQL.
+ * Jika database MySQL offline, generator otomatis beralih ke mode pengetahuan terstruktur (fallback).
  */
 export function createGeminiAgentGenerator(defaultSystemInstruction) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
   return async (contents, dynamicSystemInstruction) => {
     const baseInstruction = dynamicSystemInstruction || defaultSystemInstruction || buildSystemPrompt();
-    const fullSystemInstruction = `${baseInstruction}\n\n=== KEMAMPUAN AGENTIC DATABASE (FUNCTION CALLING) ===\n${getDbSchemaDescription()}\nKamu dapat menggunakan tool 'execute_sql_query' kapan pun kamu membutuhkan data spesifik relasi antar-tabel dari database.`;
+    const pool = getDbPool();
+    const hasDb = Boolean(pool);
 
-    const model = genAI.getGenerativeModel({
+    const fullSystemInstruction = hasDb
+      ? `${baseInstruction}\n\n=== KEMAMPUAN AGENTIC DATABASE (FUNCTION CALLING) ===\n${getDbSchemaDescription()}\nKamu dapat menggunakan tool 'execute_sql_query' kapan pun kamu membutuhkan data spesifik relasi antar-tabel dari database.`
+      : baseInstruction;
+
+    const modelOptions = {
       model: MODEL_NAME,
       systemInstruction: fullSystemInstruction,
-      tools: databaseAgentTools,
-    });
+    };
+    if (hasDb) {
+      modelOptions.tools = databaseAgentTools;
+    }
+
+    const model = genAI.getGenerativeModel(modelOptions);
 
     const controller = new AbortController();
     let timer;
@@ -163,41 +190,65 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
     try {
       const agentExecution = async () => {
         const currentContents = [...contents];
-        const firstResult = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
-        const firstResponse = firstResult.response;
+        let turns = 0;
+        const maxTurns = 3;
 
-        // Periksa apakah Gemini meminta eksekusi tool (Function Call)
-        const functionCalls = typeof firstResponse.functionCalls === "function" ? firstResponse.functionCalls() : null;
+        while (turns < maxTurns) {
+          turns++;
+          const result = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
+          const response = result.response;
 
-        if (Array.isArray(functionCalls) && functionCalls.length > 0) {
-          const call = functionCalls[0];
-          if (call.name === "execute_sql_query" && call.args?.sql) {
-            console.log(`[DatabaseAgent] Menjalankan query SQL: ${call.args.sql}`);
-            const queryResult = await executeDbQueryTool(call.args.sql);
+          // Periksa apakah Gemini meminta eksekusi tool (Function Call)
+          const functionCalls = typeof response.functionCalls === "function" ? response.functionCalls() : null;
 
+          if (Array.isArray(functionCalls) && functionCalls.length > 0) {
             currentContents.push({
               role: "model",
-              parts: firstResponse.candidates?.[0]?.content?.parts || [{ functionCall: call }],
+              parts: response.candidates?.[0]?.content?.parts || functionCalls.map((c) => ({ functionCall: c })),
             });
 
-            currentContents.push({
-              role: "function",
-              parts: [
-                {
+            const functionResponses = [];
+            for (const call of functionCalls) {
+              if (call.name === "execute_sql_query" && call.args?.sql) {
+                console.log(`[DatabaseAgent] Menjalankan query SQL: ${call.args.sql}`);
+                const queryResult = await executeDbQueryTool(call.args.sql);
+                functionResponses.push({
                   functionResponse: {
                     name: call.name,
                     response: queryResult,
                   },
-                },
-              ],
+                });
+              } else {
+                functionResponses.push({
+                  functionResponse: {
+                    name: call.name,
+                    response: { error: "Tool tidak dikenal atau argumen tidak lengkap" },
+                  },
+                });
+              }
+            }
+
+            currentContents.push({
+              role: "function",
+              parts: functionResponses,
             });
 
-            const secondResult = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
-            return secondResult.response.text();
+            continue;
+          }
+
+          const text = extractResponseText(response);
+          if (text) {
+            return text;
           }
         }
 
-        return firstResponse.text();
+        // Jika setelah multi-turn selesai masih belum ada teks, minta sintesis akhir teks
+        currentContents.push({
+          role: "user",
+          parts: [{ text: "Tolong berikan jawaban langsung, ramah, dan lengkap kepada pengguna berdasarkan data yang tersedia." }],
+        });
+        const finalResult = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
+        return extractResponseText(finalResult.response);
       };
 
       return await Promise.race([agentExecution(), timeoutPromise]);
