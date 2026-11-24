@@ -483,40 +483,6 @@ export default function ChatPage() {
         ref={mainScrollRef}
         className="flex-1 h-full bg-[#FAFAFA] flex flex-col justify-between relative overflow-y-auto chat-scroll"
       >
-        {/* Top Right Header Controls */}
-        <header className="w-full flex justify-end items-center px-6 py-4 gap-2 absolute top-0 left-0 right-0 pointer-events-none z-10">
-          <div className="pointer-events-auto flex items-center gap-2">
-            <button
-              type="button"
-              className="text-xs text-[#525252] hover:text-[#171717] px-2 py-1.5 rounded-md hover:bg-black/5 flex items-center gap-1 transition-colors cursor-pointer"
-              title="Dokumentasi & Panduan"
-            >
-              <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.7"
-                />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="text-xs text-[#262626] border border-[#EDEDED] bg-white shadow-xs px-2.5 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 font-normal transition-colors cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5 text-[#525252]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.8"
-                />
-              </svg>
-              <span>Download</span>
-            </button>
-          </div>
-        </header>
-
         {/* Center Canvas Stage */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
           {messages.length === 0 ? (
