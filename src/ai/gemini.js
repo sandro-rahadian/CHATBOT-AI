@@ -148,7 +148,7 @@ export function createGeminiGenerator(defaultSystemInstruction) {
   };
 }
 
-const FALLBACK_MODEL = MODEL_NAME === "gemini-3.5-flash" ? "gemini-3.5-flash-lite" : "gemini-3.5-flash";
+const FALLBACK_MODEL = MODEL_NAME === "gemini-3.1-flash-lite" ? "gemini-3.1-flash-lite-preview" : "gemini-3.1-flash-lite";
 
 /**
  * Autonomous Gemini Database Agent Generator dengan Function Calling (Text-to-SQL).
