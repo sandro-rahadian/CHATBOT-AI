@@ -7,15 +7,31 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 /**
- * Otomatis mendeteksi nomor handphone/WhatsApp (08xxx) dan telepon kantor (0341-xxx / (0341) xxx)
- * lalu mengubahnya menjadi tautan markdown yang bisa langsung diklik.
+ * Normalisasi format markdown dan otomatis mendeteksi kontak/tautan:
+ * 1. Menyeragamkan bullet unicode (•, ●, ○) menjadi standard markdown '-'
+ * 2. Menghilangkan jarak kosong ganda (loose list double newlines) antar item bullet & numbered list
+ * 3. Mencegah whitespace berlebihan (> 2 newlines)
+ * 4. Mengubah nomor telepon & WhatsApp menjadi link interaktif
  */
-function autoLinkContactsAndUrls(text: string): string {
+function normalizeAndAutoLinkContent(text: string): string {
   if (!text) return "";
+  let formatted = text;
 
-  // 1. Deteksi nomor HP / WhatsApp (08xx-xxxx-xxxx atau +628xx...)
+  // 1. Seragamkan bullet unicode (•, ●, ○) di awal baris menjadi standard markdown hyphen (-)
+  formatted = formatted.replace(/^[ \t]*[•●○][ \t]*/gm, "- ");
+
+  // 2. Rapatkan butir-butir bullet list yang dipisahkan baris kosong (loose list -> tight list)
+  formatted = formatted.replace(/(^[-*]\s+[^\n]+)\n\n+(?=[-*]\s+)/gm, "$1\n");
+
+  // 3. Rapatkan butir-butir numbered list yang dipisahkan baris kosong
+  formatted = formatted.replace(/(^\d+\.\s+[^\n]+)\n\n+(?=\d+\.\s+)/gm, "$1\n");
+
+  // 4. Batasi newline beruntun maksimal 2 (\n\n)
+  formatted = formatted.replace(/\n{3,}/g, "\n\n");
+
+  // 5. Deteksi nomor HP / WhatsApp (08xx-xxxx-xxxx atau +628xx...)
   const waRegex = /(?:(?:\+62|62|0)8[0-9]{1,2}[ -]?[0-9]{3,4}[ -]?[0-9]{3,5})/g;
-  let formatted = text.replace(waRegex, (match, offset, str) => {
+  formatted = formatted.replace(waRegex, (match, offset, str) => {
     // Hindari jika sudah berada di dalam tag markdown link [label](...)
     const before = str.slice(Math.max(0, offset - 10), offset);
     if (before.includes("](") || before.includes("href=") || before.includes("wa.me/")) return match;
@@ -24,7 +40,7 @@ function autoLinkContactsAndUrls(text: string): string {
     return `[${match}](https://wa.me/${waNumber})`;
   });
 
-  // 2. Deteksi nomor telepon kantor seperti (0341) 478195 atau 0341-353798
+  // 6. Deteksi nomor telepon kantor seperti (0341) 478195 atau 0341-353798
   const telRegex = /(?:\(?0[2-9][0-9]{1,2}\)?[ -]?[0-9]{5,8})/g;
   formatted = formatted.replace(telRegex, (match, offset, str) => {
     const before = str.slice(Math.max(0, offset - 10), offset);
@@ -70,7 +86,7 @@ export const TextGenerateEffect = ({
   }, [words, filter, duration]);
 
   const processedContent = useMemo(() => {
-    return autoLinkContactsAndUrls(words);
+    return normalizeAndAutoLinkContent(words);
   }, [words]);
 
   return (

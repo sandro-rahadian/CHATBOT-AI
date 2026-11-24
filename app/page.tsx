@@ -140,7 +140,7 @@ function ChatBubble({ message }: { message: Message }) {
         <TextGenerateEffect
           words={message.content}
           className="font-normal"
-          textClassName="text-sm font-normal text-[#171717] leading-relaxed tracking-normal whitespace-pre-wrap break-words"
+          textClassName="text-sm font-normal text-[#171717] leading-relaxed tracking-normal break-words"
           duration={0.35}
         />
 
