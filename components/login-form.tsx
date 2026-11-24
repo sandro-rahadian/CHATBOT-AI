@@ -9,7 +9,6 @@ import {
   LogIn,
   ArrowLeft,
 } from "@/components/ui/icons";
-import { toast } from "sonner";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +34,7 @@ export function LoginForm({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -42,11 +42,10 @@ export function LoginForm({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!username.trim()) {
-      toast.warning("Username Wajib Diisi", {
-        description: "Silakan masukkan username akun Anda.",
-      });
+      setError("Silakan masukkan username akun Anda.");
       return;
     }
 
@@ -72,14 +71,10 @@ export function LoginForm({
         localStorage.setItem("chat_user", JSON.stringify(data.user));
       }
 
-      toast.success("Login Berhasil", {
-        description: `Selamat datang kembali, ${data.user.username} (${data.user.role}).`,
-      });
-
       router.push("/");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal masuk ke akun.";
-      toast.error("Gagal Masuk", { description: msg });
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +113,11 @@ export function LoginForm({
 
         <CardContent className="px-6 pb-6 pt-2">
           <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium text-center">
+                {error}
+              </div>
+            )}
             <FieldGroup className="space-y-3">
               <Field>
                 <FieldLabel htmlFor="username" className="text-xs text-[#171717] font-medium">

@@ -9,7 +9,6 @@ import {
   UserPlus,
   ArrowLeft,
 } from "@/components/ui/icons";
-import { toast } from "sonner";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +44,7 @@ export function SignupForm({
   const [schoolId, setSchoolId] = useState<string>("all");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -52,18 +52,15 @@ export function SignupForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!username.trim()) {
-      toast.warning("Username Wajib Diisi", {
-        description: "Masukkan username unik untuk akun Anda.",
-      });
+      setError("Masukkan username unik untuk akun Anda.");
       return;
     }
 
     if (!password.trim() || password.length < 4) {
-      toast.warning("Kata Sandi Terlalu Pendek", {
-        description: "Kata sandi minimal 4 karakter.",
-      });
+      setError("Kata sandi minimal 4 karakter.");
       return;
     }
 
@@ -93,15 +90,11 @@ export function SignupForm({
         localStorage.setItem("chat_user", JSON.stringify(data.user));
       }
 
-      toast.success("Pendaftaran Berhasil!", {
-        description: `Akun ${data.user.username} (${data.user.role}) aktif. Silakan mulai menggunakan chatbot.`,
-      });
-
       router.push("/");
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Terjadi kesalahan saat pendaftaran.";
-      toast.error("Gagal Mendaftar", { description: msg });
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -140,6 +133,11 @@ export function SignupForm({
 
         <CardContent className="px-6 pb-6 pt-2">
           <form onSubmit={handleSubmit} className="space-y-3.5">
+            {error && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium text-center">
+                {error}
+              </div>
+            )}
             <FieldGroup className="space-y-3">
               {/* Nama Lengkap */}
               <Field>

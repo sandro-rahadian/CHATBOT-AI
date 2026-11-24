@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { toast } from "sonner";
 
 // ─── Icons from IconMCP ───────────────────────────────────────────────────────
 import {
@@ -302,7 +301,6 @@ export default function ChatPage() {
         }
       } catch (e) {
         console.error("Gagal memuat pesan percakapan:", e);
-        toast.error("Gagal Membuka Obrolan");
       } finally {
         setIsLoading(false);
       }
@@ -336,13 +334,9 @@ export default function ChatPage() {
             setActiveConversationId(null);
             setMessages([]);
           }
-          toast.info("Riwayat Dihapus", {
-            description: "Obrolan berhasil dihapus.",
-          });
         }
       } catch (e) {
         console.error("Gagal menghapus percakapan:", e);
-        toast.error("Gagal Menghapus Obrolan");
       }
     },
     [apiBase, apiToken, activeConversationId]
@@ -382,9 +376,6 @@ export default function ChatPage() {
     setConversations([]);
     setMessages([]);
     setActiveConversationId(null);
-    toast.info("Berhasil Keluar", {
-      description: "Sesi Anda telah berakhir. Anda kini dalam mode Tamu.",
-    });
   };
 
   // Auto-scroll
@@ -447,12 +438,6 @@ export default function ChatPage() {
         const errMsg =
           (errData as { error?: string }).error ||
           `Server error (${response.status})`;
-
-        if (response.status === 429) {
-          toast.warning("Kuota Harian Habis", {
-            description: errMsg,
-          });
-        }
 
         throw new Error(errMsg);
       }
@@ -626,7 +611,6 @@ export default function ChatPage() {
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
-                              toast.info("Upload Berkas", { description: "Pilih file panduan atau brosur SMK" });
                             }}
                             className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
                           >
@@ -643,7 +627,6 @@ export default function ChatPage() {
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
-                              toast.info("Proyek", { description: "Tambahkan ke proyek sekolah" });
                             }}
                             className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
                           >
@@ -678,7 +661,6 @@ export default function ChatPage() {
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
-                              toast.info("Plugins", { description: "Buka katalog plugins & skills" });
                             }}
                             className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
                           >
@@ -700,7 +682,6 @@ export default function ChatPage() {
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
-                              toast.info("Environment", { description: "Pengaturan API & variabel" });
                             }}
                             className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer border-t border-[#F0F0F0]"
                           >
