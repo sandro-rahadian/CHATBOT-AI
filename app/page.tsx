@@ -15,7 +15,6 @@ import {
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { CurvedCarousel } from "@/components/ui/curved-carousel";
 import { useSmoothScroll } from "@/components/ui/smooth-scroll";
-import { EyeTracker } from "@/components/ui/eye-tracker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,44 +35,30 @@ interface Message {
   isError?: boolean;
 }
 
-// ─── TypingIndicator (Eyetracker AI Loading Animation) ──────────────────────
+// ─── TypingIndicator (Ultra-Lightweight Minimalist Dots) ────────────────────
 
 function TypingIndicator() {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-      transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+      exit={{ opacity: 0, y: -4, scale: 0.96 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className="max-w-[80%] sm:max-w-[70%]"
     >
-      <div className="inline-flex items-center gap-3 bg-white border border-[#EDEDED] rounded-2xl rounded-tl-sm px-3.5 py-2 shadow-xs">
-        <EyeTracker
-          size={32}
-          shape="Pill"
-          eyes="Slant"
-          bodyColor="#F5F5F7"
-          eyeColor="#171717"
-          behaviorMode="Follow Cursor"
-          naturalBlinking={true}
-          followSpeed={65}
-          bounce={35}
+      <div className="inline-flex items-center gap-1.5 bg-white border border-[#EDEDED] rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-[#8C8C8C] animate-bounce"
+          style={{ animationDelay: "-0.3s", animationDuration: "0.85s" }}
         />
-        <div className="flex items-center gap-1.5 pr-1">
-          <span className="text-xs font-medium text-[#737373]">KeraVokasi sedang berpikir</span>
-          <span className="flex items-center gap-0.5">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-1 h-1 rounded-full bg-[#A3A3A3] animate-pulse"
-                style={{
-                  animationDelay: `${i * 0.25}s`,
-                  animationDuration: "1.2s",
-                }}
-              />
-            ))}
-          </span>
-        </div>
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-[#8C8C8C] animate-bounce"
+          style={{ animationDelay: "-0.15s", animationDuration: "0.85s" }}
+        />
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-[#8C8C8C] animate-bounce"
+          style={{ animationDuration: "0.85s" }}
+        />
       </div>
     </motion.div>
   );
