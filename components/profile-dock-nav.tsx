@@ -26,6 +26,35 @@ interface ProfileDockNavProps {
   onMenuOpenChange?: (open: boolean) => void;
 }
 
+// Framer MorphedMenu spring physics & perspective parameters
+const morphSpring = {
+  type: "spring" as const,
+  stiffness: 60,
+  damping: 14,
+  mass: 1,
+};
+
+const perspectiveAnimation = {
+  initial: { opacity: 0, rotateX: 60, translateY: 16 },
+  enter: {
+    opacity: 1,
+    rotateX: 0,
+    translateY: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 80,
+      damping: 15,
+      mass: 0.8,
+    },
+  },
+  exit: {
+    opacity: 0,
+    rotateX: 60,
+    translateY: 10,
+    transition: { duration: 0.15 },
+  },
+};
+
 export function ProfileDockNav({
   currentUser,
   onLogout,
@@ -91,84 +120,73 @@ export function ProfileDockNav({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={() => setMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/10 backdrop-blur-xs"
+            className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]"
           />
         )}
       </AnimatePresence>
 
-      {/* ── Expandable Menu Popup ── */}
+      {/* ── Framer MorphedMenu Popup: Strictly only Logout (or Login) Button ── */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, scale: 0.94, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 8 }}
+            transition={morphSpring}
             className={cn(
-              "fixed z-50 overflow-hidden rounded-2xl border border-[#EDEDED] bg-white shadow-xl select-none p-3 flex flex-col gap-2.5",
+              "absolute z-50 overflow-hidden rounded-[20px] border border-[#EDEDED] bg-white shadow-[0_12px_36px_-6px_rgba(0,0,0,0.12)] select-none p-1.5",
               isOpen
-                ? "bottom-[72px] left-3 w-[240px]"
-                : "bottom-16 left-[68px] w-[240px]"
+                ? "bottom-[calc(100%+8px)] left-0 w-full"
+                : "bottom-0 left-[calc(100%+10px)] w-[180px]"
             )}
           >
-            {/* User Identity Header */}
-            <div className="flex items-center gap-2.5 pb-2 border-b border-[#F0F0F0]">
-              <div className="w-8 h-8 rounded-full bg-[#171717] text-white flex items-center justify-center text-[11px] font-semibold shrink-0 shadow-xs">
-                {userInitials}
-              </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-xs font-semibold text-[#171717] truncate">
-                  {isLoggedIn ? currentUser?.username : "Tamu (Guest)"}
-                </span>
-              </div>
-            </div>
-
-            {/* Menu Actions dengan Expanding Hover Animation (Tanpa Titik di Idle State) */}
-            {isLoggedIn ? (
-              <div className="flex flex-col">
-                <DotButton
-                  variant="danger"
-                  icon={<LogOut size={14} className="shrink-0" />}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onLogout();
-                  }}
-                  className="w-full h-10 text-xs font-semibold"
+            {/* Perspective Animated Button Container */}
+            <div style={{ perspective: "70px", perspectiveOrigin: "bottom" }} className="w-full">
+              {isLoggedIn ? (
+                <motion.div
+                  variants={perspectiveAnimation}
+                  initial="initial"
+                  animate="enter"
+                  exit="exit"
+                  className="w-full"
                 >
-                  Keluar (Logout)
-                </DotButton>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {/* Button Masuk Utama dengan Expanding Hover Animation */}
-                <DotButton
-                  href="/login"
-                  variant="dark"
-                  icon={<LogIn size={14} className="shrink-0" />}
-                  onClick={() => setMenuOpen(false)}
-                  className="w-full h-10 text-xs font-semibold"
-                >
-                  Masuk Akun
-                </DotButton>
-
-                {/* Sekunder: Link ke Daftar Akun */}
-                <p className="text-[11px] text-[#737373] text-center pt-0.5">
-                  Belum punya akun?{" "}
-                  <Link
-                    href="/signup"
-                    onClick={() => setMenuOpen(false)}
-                    className="text-[#171717] hover:underline font-semibold"
+                  <DotButton
+                    variant="danger-light"
+                    icon={<LogOut size={14} className="shrink-0" />}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full h-10 text-xs font-semibold"
                   >
-                    Daftar di sini
-                  </Link>
-                </p>
-              </div>
-            )}
+                    Keluar (Logout)
+                  </DotButton>
+                </motion.div>
+              ) : (
+                <motion.div
+                  variants={perspectiveAnimation}
+                  initial="initial"
+                  animate="enter"
+                  exit="exit"
+                  className="w-full"
+                >
+                  <DotButton
+                    href="/login"
+                    variant="dark"
+                    icon={<LogIn size={14} className="shrink-0" />}
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full h-10 text-xs font-semibold"
+                  >
+                    Masuk Akun
+                  </DotButton>
+                </motion.div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Trigger Bottom Bar / Pill ── */}
+      {/* ── Trigger Bottom Bar / Pill (Clean single line without role description) ── */}
       {isOpen ? (
         <div
           onClick={() => setMenuOpen((prev) => !prev)}
@@ -178,29 +196,20 @@ export function ProfileDockNav({
           )}
           title="Buka menu akun"
         >
-          {/* User Avatar + Identity */}
-          <div className="flex items-center gap-2 overflow-hidden min-w-0">
-            <div className="w-6 h-6 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 border border-[#2E2E2F] shadow-xs transition-transform group-hover:scale-105">
+          {/* User Avatar + Name */}
+          <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[#171717] text-white flex items-center justify-center text-[10px] font-semibold shrink-0 border border-[#2E2E2F] shadow-xs transition-transform group-hover:scale-105">
               {userInitials}
             </div>
-            <div className="flex flex-col min-w-0">
-              <span
-                className="text-xs font-medium text-[#262626] truncate max-w-[110px]"
-                title={currentUser?.username || "Tamu"}
-              >
-                {isLoggedIn ? currentUser?.username : "Tamu (Guest)"}
-              </span>
-              <span className="text-[10px] text-[#8C8C8C] capitalize truncate max-w-[110px]">
-                {isLoggedIn
-                  ? role === "admin"
-                    ? "Administrator"
-                    : "Siswa"
-                  : "Belum login"}
-              </span>
-            </div>
+            <span
+              className="text-xs font-medium text-[#262626] truncate"
+              title={currentUser?.username || "Tamu"}
+            >
+              {isLoggedIn ? currentUser?.username : "Tamu (Guest)"}
+            </span>
           </div>
 
-          {/* Right Action Icon: Rotating Chevron Only (No Notification Bell) */}
+          {/* Right Action Icon: Rotating Chevron */}
           <div className="flex items-center pr-1 text-[#737373]">
             <motion.div
               animate={{ rotate: isMenuOpen ? 180 : 0 }}

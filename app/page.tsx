@@ -488,14 +488,38 @@ export default function ChatPage() {
           {messages.length === 0 ? (
             /* ── MiniMax Code Hero & Empty State ── */
             <div className="w-full flex flex-col items-center justify-center">
-              {/* Primary Hero Title */}
-              <h1 className="text-[28px] sm:text-[32px] font-semibold text-[#171717] tracking-[-0.02em] text-center mb-7">
-                KeraVokasi makes school search easier
-              </h1>
+              {/* Primary Hero Title with Codigo Staggered Character Slide-Up Transition */}
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-[28px] sm:text-[34px] font-semibold text-[#171717] tracking-[-0.02em] text-center mb-7 flex items-center justify-center flex-wrap"
+              >
+                {"Arek vokasi kate nggolek opo?".split("").map((char, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: i * 0.025,
+                      duration: 0.35,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    style={{
+                      display: "inline-block",
+                      whiteSpace: char === " " ? "pre" : "normal",
+                    }}
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+              </motion.h1>
 
-              {/* Omnibox Interactive Container */}
-              <div
-                className="w-full max-w-[720px] bg-white rounded-2xl border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] p-4 flex flex-col justify-between min-h-[142px] transition-shadow focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.06)] focus-within:border-[#D4D4D4] relative"
+              {/* Omnibox Interactive Container with Codigo Elevation & Spring Transitions */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 120, damping: 16 }}
+                className="w-full max-w-[720px] bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] p-4 flex flex-col justify-between min-h-[142px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#171717] relative"
               >
                 {/* Editable Prompt Area */}
                 <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
@@ -513,21 +537,23 @@ export default function ChatPage() {
 
                 {/* Omnibox Bottom Toolbar Row */}
                 <div className="flex items-center justify-between pt-3 border-t border-transparent">
-                  {/* Left: Attachment + Popover Dropdown */}
+                  {/* Left: Attachment + Popover Dropdown with Codigo Micro-Interactions */}
                   <div className="relative">
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.94 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowAttachmentMenu((prev) => !prev);
                       }}
-                      className="w-7 h-7 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-all cursor-pointer"
+                      className="w-8 h-8 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-colors cursor-pointer"
                       title="Add attachments or skills"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                       </svg>
-                    </button>
+                    </motion.button>
 
                     {/* Popover Menu matching Reference Screen */}
                     <AnimatePresence>
@@ -536,14 +562,14 @@ export default function ChatPage() {
                           initial={{ opacity: 0, scale: 0.95, y: 5 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 5 }}
-                          transition={{ duration: 0.12 }}
-                          className="absolute bottom-9 left-0 w-48 bg-white rounded-xl shadow-lg border border-[#EDEDED] py-1 text-xs text-[#262626] z-50"
+                          transition={{ duration: 0.14, ease: "easeOut" }}
+                          className="absolute bottom-10 left-0 w-48 bg-white rounded-xl shadow-lg border border-[#EDEDED] py-1 text-xs text-[#262626] z-50"
                         >
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
                             }}
-                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
+                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
                             <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
@@ -559,7 +585,7 @@ export default function ChatPage() {
                             onClick={() => {
                               setShowAttachmentMenu(false);
                             }}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
+                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
                               <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -577,7 +603,7 @@ export default function ChatPage() {
                               setShowAttachmentMenu(false);
                               setInputValue("/skill jurusan ");
                             }}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
+                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
                               <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,7 +619,7 @@ export default function ChatPage() {
                             onClick={() => {
                               setShowAttachmentMenu(false);
                             }}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer"
+                            className="flex items-center justify-between px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
                               <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -614,7 +640,7 @@ export default function ChatPage() {
                             onClick={() => {
                               setShowAttachmentMenu(false);
                             }}
-                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer border-t border-[#F0F0F0]"
+                            className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer border-t border-[#F0F0F0] transition-colors"
                           >
                             <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
@@ -631,10 +657,12 @@ export default function ChatPage() {
                     </AnimatePresence>
                   </div>
 
-                  {/* Right: Model Selector + Send CTA */}
+                  {/* Right: Model Selector + Codigo Animated Send CTA */}
                   <div className="flex items-center gap-2">
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors cursor-pointer"
                       title="Ganti Model AI"
                     >
@@ -643,81 +671,135 @@ export default function ChatPage() {
                       <svg className="w-3 h-3 text-[#8C8C8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                       </svg>
-                    </button>
+                    </motion.button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSend(inputValue)}
-                      disabled={isLoading || (!isGuest && !inputValue.trim())}
-                      className="w-7 h-7 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-xs"
-                      title="Send message"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                      </svg>
-                    </button>
+                    <AnimatePresence mode="wait">
+                      {inputValue.trim().length > 0 ? (
+                        <motion.button
+                          key="send-active"
+                          type="button"
+                          onClick={() => handleSend(inputValue)}
+                          disabled={isLoading}
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.18, ease: "easeOut" }}
+                          whileTap={{ scale: 0.92 }}
+                          whileHover={{ scale: 1.05 }}
+                          className="w-8 h-8 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center cursor-pointer shadow-sm transition-colors"
+                          title="Send message"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                          </svg>
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          key="send-idle"
+                          type="button"
+                          onClick={() => handleSend(inputValue)}
+                          disabled={isLoading || (!isGuest && !inputValue.trim())}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 0.35, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.18 }}
+                          className="w-8 h-8 rounded-full bg-[#E5E5E5] text-[#737373] flex items-center justify-center cursor-not-allowed shadow-none"
+                          title="Ketik pesan..."
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                          </svg>
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Quick Action Suggestion Chips */}
+              {/* Quick Action Suggestion Chips with Codigo Staggered Entrance */}
               <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleSend("Rekomendasikan jurusan SMK berbasis teknologi dan multimedia di Malang")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-all cursor-pointer"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect height="18" rx="2" strokeWidth="1.7" width="18" x="3" y="3" />
-                    <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.7" />
-                    <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
-                  </svg>
-                  <span>Jurusan Populer</span>
-                  <span className="bg-[#EBF5FF] text-[#2563EB] text-[10px] font-medium px-1.5 py-0.2 rounded-md">New</span>
-                </button>
+                {[
+                  {
+                    title: "Jurusan Populer",
+                    query: "Rekomendasikan jurusan SMK berbasis teknologi dan multimedia di Malang",
+                    badge: "New",
+                    badgeColor: "bg-[#EBF5FF] text-[#2563EB]",
+                    icon: (
+                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect height="18" rx="2" strokeWidth="1.7" width="18" x="3" y="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.7" />
+                        <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Jalur PPDB",
+                    query: "Bagaimana alur pendaftaran dan jadwal PPDB SMK Malang tahun ini?",
+                    badge: "H3",
+                    badgeColor: "bg-[#F3E8FF] text-[#9333EA]",
+                    icon: (
+                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Syarat Berkas",
+                    query: "Apa saja syarat berkas pendaftaran PPDB SMK Malang?",
+                    icon: (
+                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    title: "Daftar SMK",
+                    query: "Berikan daftar SMK Negeri dan Swasta terbaik di Kota Malang",
+                    icon: (
+                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect height="14" rx="2" strokeWidth="1.7" width="20" x="2" y="3" />
+                        <path d="M8 21h8m-4-4v4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                    ),
+                  },
+                ].map((chip, idx) => (
+                  <motion.button
+                    key={chip.title}
+                    type="button"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: 0.25 + idx * 0.04,
+                      duration: 0.35,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    whileHover={{ y: -2, scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleSend(chip.query)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] hover:border-[#D4D4D4] shadow-xs transition-colors cursor-pointer"
+                  >
+                    {chip.icon}
+                    <span>{chip.title}</span>
+                    {chip.badge && (
+                      <span className={`${chip.badgeColor} text-[10px] font-medium px-1.5 py-0.2 rounded-md`}>
+                        {chip.badge}
+                      </span>
+                    )}
+                  </motion.button>
+                ))}
 
-                <button
+                <motion.button
                   type="button"
-                  onClick={() => handleSend("Bagaimana alur pendaftaran dan jadwal PPDB SMK Malang tahun ini?")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-all cursor-pointer"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
-                  </svg>
-                  <span>Jalur PPDB</span>
-                  <span className="bg-[#F3E8FF] text-[#9333EA] text-[10px] font-medium px-1.5 py-0.2 rounded-md">H3</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSend("Apa saja syarat berkas pendaftaran PPDB SMK Malang?")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-all cursor-pointer"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
-                  </svg>
-                  <span>Syarat Berkas</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSend("Berikan daftar SMK Negeri dan Swasta terbaik di Kota Malang")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-all cursor-pointer"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect height="14" rx="2" strokeWidth="1.7" width="20" x="2" y="3" />
-                    <path d="M8 21h8m-4-4v4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
-                  </svg>
-                  <span>Daftar SMK</span>
-                </button>
-
-                <button
-                  type="button"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.42, duration: 0.35 }}
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => setInputValue("Jelaskan prospek kerja lulusan SMK jurusan ")}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-colors cursor-pointer"
                 >
                   <span>More</span>
-                </button>
+                </motion.button>
               </div>
 
               {/* ── Curved Carousel Showcase (Framer Curved Carousel Component) ── */}
@@ -752,8 +834,8 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Sticky MiniMax Omnibox at bottom of conversation */}
-              <div className="w-full bg-white rounded-2xl border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.04)] p-3.5 flex flex-col justify-between min-h-[110px] mt-2 relative">
+              {/* Sticky MiniMax Omnibox at bottom of conversation with Codigo Transitions */}
+              <div className="w-full bg-white rounded-2xl border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.04)] p-3.5 flex flex-col justify-between min-h-[110px] mt-2 relative transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#171717]">
                 <textarea
                   ref={textareaRef}
                   value={inputValue}
@@ -767,39 +849,71 @@ export default function ChatPage() {
 
                 <div className="flex items-center justify-between pt-2 border-t border-transparent">
                   <div className="relative">
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.94 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowAttachmentMenu((prev) => !prev);
                       }}
-                      className="w-7 h-7 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] transition-all cursor-pointer"
+                      className="w-8 h-8 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-colors cursor-pointer"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
                       </svg>
-                    </button>
+                    </motion.button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
+                    <motion.button
                       type="button"
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors cursor-pointer"
                     >
                       <span className="font-normal text-[#404040]">SMK1.1-Flash</span>
                       <span className="text-[#8C8C8C] text-[11px]">default</span>
-                    </button>
+                    </motion.button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSend(inputValue)}
-                      disabled={isLoading || (!isGuest && !inputValue.trim())}
-                      className="w-7 h-7 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-xs"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                      </svg>
-                    </button>
+                    <AnimatePresence mode="wait">
+                      {inputValue.trim().length > 0 ? (
+                        <motion.button
+                          key="send-bottom-active"
+                          type="button"
+                          onClick={() => handleSend(inputValue)}
+                          disabled={isLoading}
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.18, ease: "easeOut" }}
+                          whileTap={{ scale: 0.92 }}
+                          whileHover={{ scale: 1.05 }}
+                          className="w-8 h-8 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center cursor-pointer shadow-sm transition-colors"
+                          title="Send message"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                          </svg>
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          key="send-bottom-idle"
+                          type="button"
+                          onClick={() => handleSend(inputValue)}
+                          disabled={isLoading || (!isGuest && !inputValue.trim())}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 0.35, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.18 }}
+                          className="w-8 h-8 rounded-full bg-[#E5E5E5] text-[#737373] flex items-center justify-center cursor-not-allowed shadow-none"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 10l7-7m0 0l7 7m-7-7v18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                          </svg>
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
