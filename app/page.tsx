@@ -21,6 +21,7 @@ import {
 } from "@/components/sidebar-dock-menu";
 
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
+import { CurvedCarousel } from "@/components/ui/curved-carousel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -408,8 +409,11 @@ export default function ChatPage() {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      if (apiToken) {
-        headers["x-api-token"] = apiToken;
+      const tokenToSend =
+        apiToken ||
+        (typeof window !== "undefined" ? localStorage.getItem("chat_token") : null);
+      if (tokenToSend) {
+        headers["x-api-token"] = tokenToSend;
       }
 
       const response = await fetch(`${apiBase}/chat`, {
@@ -545,7 +549,7 @@ export default function ChatPage() {
         </header>
 
         {/* Center Canvas Stage */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-4xl mx-auto my-auto pt-16 pb-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
           {messages.length === 0 ? (
             /* ── MiniMax Code Hero & Empty State ── */
             <div className="w-full flex flex-col items-center justify-center">
@@ -779,6 +783,23 @@ export default function ChatPage() {
                 >
                   <span>More</span>
                 </button>
+              </div>
+
+              {/* ── Curved Carousel Showcase (Framer Curved Carousel Component) ── */}
+              <div className="w-full mt-7 flex justify-center overflow-hidden">
+                <CurvedCarousel
+                  curve={0.35}
+                  speed={28}
+                  cardWidth={190}
+                  cardHeight={250}
+                  gap={20}
+                  radius={16}
+                  height={290}
+                  width="100%"
+                  paper="#FFFFFF"
+                  cardBorder="rgba(0, 0, 0, 0.08)"
+                  captionFade={0.65}
+                />
               </div>
             </div>
           ) : (
