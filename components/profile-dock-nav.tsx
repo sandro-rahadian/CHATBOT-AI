@@ -5,10 +5,10 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  LogOut,
   LogIn,
   ChevronDown,
 } from "@/components/ui/icons";
+import { AnimatedArrowButton } from "@/components/ui/animated-arrow-button";
 import {
   Tooltip,
   TooltipContent,
@@ -52,13 +52,6 @@ export function ProfileDockNav({
   const role = currentUser?.role || "guest";
   const isLoggedIn = role !== "guest";
   const userInitials = currentUser?.username?.slice(0, 2).toUpperCase() || "GU";
-
-  const quotaDisplay =
-    role === "admin"
-      ? "∞"
-      : currentUser?.remainingQuota !== null && currentUser?.remainingQuota !== undefined
-      ? `${currentUser.remainingQuota}`
-      : "-";
 
   // Close on Escape or click outside
   useEffect(() => {
@@ -134,41 +127,26 @@ export function ProfileDockNav({
                     : "Belum masuk akun"}
                 </span>
               </div>
-              {isLoggedIn && (
-                <div className="flex items-center gap-1 text-[10px] font-mono bg-[#F5F5F5] px-2 py-0.5 rounded-full text-[#525252]">
-                  <span>Kuota:</span>
-                  <span className="font-semibold text-[#171717]">
-                    {quotaDisplay}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Menu Actions */}
             {isLoggedIn ? (
               <div className="flex flex-col gap-2">
                 <div className="px-3 py-2 rounded-xl bg-[#FAFAFA] border border-[#F0F0F0] text-xs">
-                  <div className="flex justify-between items-center text-[#737373] text-[11px] mb-1">
-                    <span>Sisa Kuota Harian</span>
-                    <span className="font-semibold text-[#171717] font-mono">{quotaDisplay}</span>
-                  </div>
                   <div className="flex justify-between items-center text-[#737373] text-[11px]">
                     <span>Peran Akun</span>
                     <span className="font-semibold text-[#171717] capitalize">{role}</span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
+                <AnimatedArrowButton
+                  text="Keluar (Logout)"
+                  variant="white"
                   onClick={() => {
                     setMenuOpen(false);
                     onLogout();
                   }}
-                  className="w-full h-10 rounded-full text-xs font-medium text-[#DC3341] hover:bg-red-50 flex items-center justify-center gap-2 transition-colors cursor-pointer border border-transparent hover:border-red-200"
-                >
-                  <LogOut size={14} className="text-[#DC3341]" />
-                  <span>Keluar (Logout)</span>
-                </button>
+                />
               </div>
             ) : (
               <div className="flex flex-col gap-2">

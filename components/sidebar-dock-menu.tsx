@@ -107,14 +107,6 @@ export function SidebarDockMenu({
   const isLoggedIn = role !== "guest";
   const badge = getRoleBadgeStyle(role);
 
-  const quotaDisplay =
-    role === "admin"
-      ? "∞"
-      : currentUser?.remainingQuota !== null &&
-        currentUser?.remainingQuota !== undefined
-      ? `${currentUser.remainingQuota}`
-      : "-";
-
   const userInitials =
     currentUser?.username?.slice(0, 2).toUpperCase() || "KV";
 
