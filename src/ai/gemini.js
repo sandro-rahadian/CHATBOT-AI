@@ -207,10 +207,12 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
           const functionCalls = typeof response.functionCalls === "function" ? response.functionCalls() : null;
 
           if (Array.isArray(functionCalls) && functionCalls.length > 0) {
-            currentContents.push({
-              role: "model",
-              parts: response.candidates?.[0]?.content?.parts || functionCalls.map((c) => ({ functionCall: c })),
-            });
+            currentContents.push(
+              response.candidates?.[0]?.content || {
+                role: "model",
+                parts: functionCalls.map((c) => ({ functionCall: c })),
+              }
+            );
 
             const functionResponses = [];
             for (const call of functionCalls) {
@@ -233,8 +235,9 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
               }
             }
 
+            // Pada Gemini 3.5 API, role 'function' sudah dideprecate dan wajib menggunakan role 'user'
             currentContents.push({
-              role: "function",
+              role: "user",
               parts: functionResponses,
             });
 
@@ -247,12 +250,16 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
           }
         }
 
-        // Jika setelah multi-turn selesai masih belum ada teks, minta sintesis akhir teks
+        // Jika setelah multi-turn selesai masih belum ada teks, minta sintesis akhir teks tanpa tools
+        const synthesisModel = genAI.getGenerativeModel({
+          model: activeModelName,
+          systemInstruction: fullSystemInstruction,
+        });
         currentContents.push({
           role: "user",
           parts: [{ text: "Tolong berikan jawaban langsung, ramah, dan lengkap kepada pengguna berdasarkan data yang tersedia." }],
         });
-        const finalResult = await model.generateContent({ contents: currentContents }, { signal: controller.signal });
+        const finalResult = await synthesisModel.generateContent({ contents: currentContents }, { signal: controller.signal });
         return extractResponseText(finalResult.response);
       };
 
