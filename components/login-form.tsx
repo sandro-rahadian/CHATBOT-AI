@@ -68,6 +68,9 @@ export function LoginForm({
 
       const data = await res.json();
       localStorage.setItem("chat_token", data.token);
+      if (data.user) {
+        localStorage.setItem("chat_user", JSON.stringify(data.user));
+      }
 
       toast.success("Login Berhasil", {
         description: `Selamat datang kembali, ${data.user.username} (${data.user.role}).`,
@@ -88,21 +91,21 @@ export function LoginForm({
         {/* Header Branding */}
         <CardHeader className="text-center pb-2 pt-6">
           <div className="mx-auto mb-3 flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
               <Image
-                src="/minimax-assets/apple-touch_v2ae52.png"
+                src="/logo-v2.png"
                 alt="KeraVokasi"
-                width={36}
-                height={36}
+                width={40}
+                height={40}
                 className="w-full h-full object-contain"
                 priority
+                unoptimized
               />
             </div>
             <div className="text-left">
               <h2 className="text-xl font-bold tracking-tight text-[#171717]">
                 KeraVokasi
               </h2>
-              <p className="text-xs text-[#666666]">Asisten AI SMK Malang</p>
             </div>
           </div>
           <CardTitle className="text-base font-semibold text-[#171717]">
@@ -126,7 +129,7 @@ export function LoginForm({
                   placeholder="Contoh: budi_siswa / username Anda"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
+                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -143,14 +146,14 @@ export function LoginForm({
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
+                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                 />
               </Field>
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#171717] hover:bg-black text-white font-semibold rounded-lg h-10 text-xs shadow-xs cursor-pointer transition-all mt-2"
+                className="w-full bg-[#171717] hover:bg-black text-white font-medium rounded-full h-11 text-sm border border-[#171717] shadow-none cursor-pointer transition-colors mt-2"
               >
                 {isLoading ? (
                   <>
@@ -173,7 +176,7 @@ export function LoginForm({
               Belum memiliki akun?{" "}
               <Link
                 href="/signup"
-                className="text-[#171717] hover:underline font-semibold"
+                className="text-[#737373] hover:text-[#171717] hover:underline font-semibold"
               >
                 Daftar Akun Baru
               </Link>

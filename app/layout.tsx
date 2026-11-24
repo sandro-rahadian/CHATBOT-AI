@@ -15,15 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KeraVokasi | Asisten AI SMK Malang",
+  title: "KeraVokasi",
   description: "Asisten AI resmi seputar sekolah kejuruan SMK di Malang",
   icons: {
     icon: [
-      { url: "/logo.png?v=2", type: "image/png" },
-      { url: "/favicon.ico?v=2" },
+      { url: "/logo-v2.png", type: "image/png" },
+      { url: "/favicon.ico?v=4" },
     ],
     apple: [
-      { url: "/apple-icon.png?v=2" },
+      { url: "/apple-icon.png?v=4" },
     ],
   },
 };
@@ -36,12 +36,12 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0A0A0B] text-[#FFFFFF]">
+      <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#171717]">
         <TooltipProvider>
           {children}
-          <Toaster position="top-center" theme="dark" />
+          <Toaster position="top-center" theme="light" />
         </TooltipProvider>
       </body>
     </html>

@@ -22,12 +22,10 @@ import {
 } from "@/components/ui/card";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -43,7 +41,7 @@ export function SignupForm({
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
-  const [role, setRole] = useState<"siswa" | "guru">("siswa");
+  const role = "siswa"; // Otomatis terdaftar sebagai siswa
   const [schoolId, setSchoolId] = useState<string>("all");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +89,9 @@ export function SignupForm({
 
       const data = await res.json();
       localStorage.setItem("chat_token", data.token);
+      if (data.user) {
+        localStorage.setItem("chat_user", JSON.stringify(data.user));
+      }
 
       toast.success("Pendaftaran Berhasil!", {
         description: `Akun ${data.user.username} (${data.user.role}) aktif. Silakan mulai menggunakan chatbot.`,
@@ -112,28 +113,28 @@ export function SignupForm({
         {/* Header Branding */}
         <CardHeader className="text-center pb-2 pt-6">
           <div className="mx-auto mb-3 flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
               <Image
-                src="/minimax-assets/apple-touch_v2ae52.png"
+                src="/logo-v2.png"
                 alt="KeraVokasi"
-                width={36}
-                height={36}
+                width={40}
+                height={40}
                 className="w-full h-full object-contain"
                 priority
+                unoptimized
               />
             </div>
             <div className="text-left">
               <h2 className="text-xl font-bold tracking-tight text-[#171717]">
                 KeraVokasi
               </h2>
-              <p className="text-xs text-[#666666]">Asisten AI SMK Malang</p>
             </div>
           </div>
           <CardTitle className="text-base font-semibold text-[#171717]">
             Daftar Akun Baru
           </CardTitle>
           <CardDescription className="text-xs text-[#666666]">
-            Daftarkan akun untuk mendapatkan akses chat dan kuota harian
+            Daftarkan akun siswa untuk mengakses chat asisten dan informasi sekolah
           </CardDescription>
         </CardHeader>
 
@@ -151,7 +152,7 @@ export function SignupForm({
                   placeholder="Contoh: Rian Pratama"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
+                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -167,47 +168,9 @@ export function SignupForm({
                   placeholder="Contoh: rian_siswa"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
+                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
-              </Field>
-
-              {/* Role Selection */}
-              <Field>
-                <FieldLabel htmlFor="role-select" className="text-xs text-[#171717] font-medium">
-                  Peran / Status Pengguna *
-                </FieldLabel>
-                <Select
-                  value={role}
-                  onValueChange={(val) => setRole(val as "siswa" | "guru")}
-                >
-                  <SelectTrigger className="w-full bg-[#FAFAFA] border-[#EDEDED] text-xs text-[#171717] rounded-lg h-10 px-3 focus:border-[#171717]">
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-[#EDEDED] text-xs text-[#171717] rounded-lg shadow-xl">
-                    <SelectItem value="siswa" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#171717]">Siswa / Calon Siswa</span>
-                        <Badge variant="outline" className="text-[9px] bg-[#F5F5F5] text-[#525252] border-[#E5E5E5] rounded-md">
-                          50 kuota/hari
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="guru" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#171717]">Guru / Tenaga Pendidik</span>
-                        <Badge variant="outline" className="text-[9px] bg-[#171717] text-white border-transparent font-medium rounded-md">
-                          200 kuota/hari + Web
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <FieldDescription className="text-[10px] text-[#666666]">
-                  {role === "guru"
-                    ? "Guru berhak mengakses Profil Sekolah, Hasil Riset Web Otomatis, dan 200 pesan/hari."
-                    : "Siswa berhak mengakses Jurusan, Fasilitas, Alamat & PPDB dengan 50 pesan/hari."}
-                </FieldDescription>
               </Field>
 
               {/* School Isolation Selection */}
@@ -216,12 +179,12 @@ export function SignupForm({
                   Asal Sekolah (Opsional)
                 </FieldLabel>
                 <Select value={schoolId} onValueChange={setSchoolId}>
-                  <SelectTrigger className="w-full bg-[#FAFAFA] border-[#EDEDED] text-xs text-[#171717] rounded-lg h-10 px-3 focus:border-[#171717]">
+                  <SelectTrigger className="w-full bg-white border border-[#171717] text-sm text-[#171717] rounded-full h-11 px-4 focus:border-black focus:ring-1 focus:ring-black transition-colors">
                     <SelectValue placeholder="Pilih sekolah" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#EDEDED] text-xs text-[#171717] rounded-lg shadow-xl">
+                  <SelectContent className="bg-white border border-[#171717] text-xs text-[#171717] rounded-xl shadow-xl">
                     <SelectItem value="all" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      Semua Sekolah (Tanpa Filter Kunci)
+                      Semua Sekolah (Umum)
                     </SelectItem>
                     <SelectItem value="1" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
                       SMK Telkom Malang
@@ -250,7 +213,7 @@ export function SignupForm({
                   placeholder="Minimal 4 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#FAFAFA] border-[#EDEDED] text-sm text-[#171717] focus:border-[#171717] placeholder:text-[#949494] rounded-lg h-10 px-3"
+                  className="bg-white border border-[#171717] text-sm text-[#171717] focus:border-black focus:ring-1 focus:ring-black placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
               </Field>
@@ -258,7 +221,7 @@ export function SignupForm({
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#171717] hover:bg-black text-white font-semibold rounded-lg h-10 text-xs shadow-xs cursor-pointer transition-all mt-3"
+                className="w-full bg-[#171717] hover:bg-black text-white font-medium rounded-full h-11 text-sm border border-[#171717] shadow-none cursor-pointer transition-colors mt-3"
               >
                 {isLoading ? (
                   <>
@@ -281,7 +244,7 @@ export function SignupForm({
               Sudah memiliki akun terdaftar?{" "}
               <Link
                 href="/login"
-                className="text-[#171717] hover:underline font-semibold"
+                className="text-[#737373] hover:text-[#171717] hover:underline font-semibold"
               >
                 Masuk di Sini
               </Link>

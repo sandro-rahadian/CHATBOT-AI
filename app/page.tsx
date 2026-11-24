@@ -9,22 +9,10 @@ import { toast } from "sonner";
 // ─── Icons from IconMCP ───────────────────────────────────────────────────────
 import {
   BookOpen,
-  Lock,
-  LogIn,
-  UserPlus,
 } from "@/components/ui/icons";
 
 // ─── Shadcn UI Components ─────────────────────────────────────────────────────
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 // ─── Sidebar Dock Menu (MiniMax Layout) ────────────────────────────────────────
 import {
@@ -51,6 +39,7 @@ interface Message {
   timestamp: Date;
   sources?: SourceItem[];
   userRole?: string;
+  isError?: boolean;
 }
 
 // ─── TypingIndicator ──────────────────────────────────────────────────────────
@@ -89,6 +78,34 @@ function ChatBubble({ message }: { message: Message }) {
     minute: "2-digit",
     hour12: false,
   });
+
+  if (message.isError) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+        className="flex flex-col items-start gap-1 max-w-[85%] sm:max-w-[75%]"
+      >
+        <div className="flex items-start gap-3 bg-[#FEF2F2] border border-[#FCA5A5] rounded-2xl rounded-tl-sm px-4 py-3.5 shadow-xs w-full text-[#B91C1C]">
+          <div className="w-5 h-5 rounded-full bg-[#FEE2E2] flex items-center justify-center shrink-0 mt-0.5">
+            <svg className="w-3.5 h-3.5 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-[#991B1B] mb-0.5">Gagal Mengirim Pesan</p>
+            <p className="text-xs font-normal text-[#DC2626] leading-relaxed whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          </div>
+        </div>
+        <span className="text-[10px] text-[#DC2626]/70 font-mono px-1">
+          {timeStr}
+        </span>
+      </motion.div>
+    );
+  }
 
   if (isUser) {
     return (
@@ -178,8 +195,7 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -196,7 +212,11 @@ export default function ChatPage() {
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
     "https://chatbot-ai-production-b22e59af.up.railway.app";
 
-  const isLoggedIn = !!apiToken && currentUser?.role !== "guest";
+  const isLoggedIn =
+    Boolean(
+      apiToken ||
+        (typeof window !== "undefined" && localStorage.getItem("chat_token"))
+    ) && (currentUser ? currentUser.role !== "guest" : true);
 
   // Fetch /me profile
   const fetchProfile = useCallback(
@@ -209,8 +229,10 @@ export default function ChatPage() {
         if (res.ok) {
           const profile: UserProfile = await res.json();
           setCurrentUser(profile);
+          localStorage.setItem("chat_user", JSON.stringify(profile));
         } else if (res.status === 401 && token) {
           localStorage.removeItem("chat_token");
+          localStorage.removeItem("chat_user");
           setApiToken(null);
           setCurrentUser(null);
           setConversations([]);
@@ -329,8 +351,16 @@ export default function ChatPage() {
   // Initial load
   useEffect(() => {
     const savedToken = localStorage.getItem("chat_token");
+    const savedUser = localStorage.getItem("chat_user");
     if (savedToken) {
       setApiToken(savedToken);
+      if (savedUser) {
+        try {
+          setCurrentUser(JSON.parse(savedUser));
+        } catch {
+          // ignore parsing error
+        }
+      }
       fetchProfile(savedToken);
       fetchConversations(savedToken);
     } else {
@@ -346,6 +376,7 @@ export default function ChatPage() {
   // Logout handler
   const handleLogout = () => {
     localStorage.removeItem("chat_token");
+    localStorage.removeItem("chat_user");
     setApiToken(null);
     setCurrentUser(null);
     setConversations([]);
@@ -361,17 +392,22 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  const handleSend = async (userMessage: string) => {
-    if (!userMessage.trim() || isLoading) return;
+  const isGuest =
+    !apiToken &&
+    (!currentUser || currentUser.role === "guest");
 
-    // Strict Login Guard: Guest cannot send chat messages
-    if (!isLoggedIn) {
-      setShowLoginPrompt(true);
-      toast.warning("Harap Masuk Terlebih Dahulu", {
-        description: "Anda harus login untuk dapat bertanya kepada asisten AI.",
-      });
+  const handleSend = async (userMessage: string) => {
+    const activeToken =
+      apiToken ||
+      (typeof window !== "undefined" ? localStorage.getItem("chat_token") : null);
+
+    // Strict Login Guard: Guest cannot send chat messages -> trigger bottom sidebar login menu
+    if (!activeToken && (!currentUser || currentUser.role === "guest")) {
+      setIsProfileMenuOpen(true);
       return;
     }
+
+    if (!userMessage.trim() || isLoading) return;
 
     const newUserMsg: Message = {
       id: crypto.randomUUID(),
@@ -459,9 +495,15 @@ export default function ChatPage() {
       const msg =
         err instanceof Error ? err.message : "Gagal terhubung ke server.";
       setError(msg);
-      toast.error("Gagal Mengirim Pesan", {
-        description: msg,
-      });
+      // Render error message inside chat stream as red card instead of toast notification
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: msg,
+        timestamp: new Date(),
+        isError: true,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -472,15 +514,6 @@ export default function ChatPage() {
       e.preventDefault();
       handleSend(inputValue);
     }
-  };
-
-  const handleClearConfirm = () => {
-    setMessages([]);
-    setShowConfirm(false);
-    setError(null);
-    toast.info("Percakapan Dibersihkan", {
-      description: "Semua pesan sesi ini telah dihapus.",
-    });
   };
 
   return (
@@ -494,7 +527,8 @@ export default function ChatPage() {
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
         onLogout={handleLogout}
-        onClear={() => setShowConfirm(true)}
+        isProfileMenuOpen={isProfileMenuOpen}
+        onProfileMenuOpenChange={setIsProfileMenuOpen}
       />
 
       {/* ── Main Workbench Canvas ── */}
@@ -546,11 +580,6 @@ export default function ChatPage() {
               {/* Omnibox Interactive Container */}
               <div
                 className="w-full max-w-[720px] bg-white rounded-2xl border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] p-4 flex flex-col justify-between min-h-[142px] transition-shadow focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.06)] focus-within:border-[#D4D4D4] relative"
-                onClick={() => {
-                  if (!isLoggedIn) {
-                    setShowLoginPrompt(true);
-                  }
-                }}
               >
                 {/* Editable Prompt Area */}
                 <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
@@ -697,7 +726,7 @@ export default function ChatPage() {
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors cursor-pointer"
                       title="Ganti Model AI"
                     >
-                      <span className="font-normal text-[#404040]">M3.1-Flash</span>
+                      <span className="font-normal text-[#404040]">SMK1.1-Flash</span>
                       <span className="text-[#8C8C8C] text-[11px]">default</span>
                       <svg className="w-3 h-3 text-[#8C8C8C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
@@ -707,7 +736,7 @@ export default function ChatPage() {
                     <button
                       type="button"
                       onClick={() => handleSend(inputValue)}
-                      disabled={!inputValue.trim() || isLoading}
+                      disabled={isLoading || (!isGuest && !inputValue.trim())}
                       className="w-7 h-7 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-xs"
                       title="Send message"
                     >
@@ -828,14 +857,14 @@ export default function ChatPage() {
                       type="button"
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] border border-[#E5E5E5] text-xs text-[#525252] transition-colors"
                     >
-                      <span className="font-normal text-[#404040]">M3.1-Flash</span>
+                      <span className="font-normal text-[#404040]">SMK1.1-Flash</span>
                       <span className="text-[#8C8C8C] text-[11px]">default</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleSend(inputValue)}
-                      disabled={!inputValue.trim() || isLoading}
+                      disabled={isLoading || (!isGuest && !inputValue.trim())}
                       className="w-7 h-7 rounded-full bg-[#171717] hover:bg-black text-white flex items-center justify-center transition-all disabled:opacity-40 cursor-pointer shadow-xs"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -852,70 +881,6 @@ export default function ChatPage() {
         {/* Empty footer spacer to preserve optical balance */}
         <div className="h-6 pointer-events-none" />
       </main>
-
-      {/* ── Dialogs: Login Prompt & Clear Confirmation ── */}
-      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
-        <DialogContent className="border border-[#EDEDED] bg-white text-[#171717] shadow-xl sm:max-w-md p-6 rounded-2xl">
-          <DialogHeader>
-            <div className="w-10 h-10 rounded-xl bg-[#F5F5F5] border border-[#EDEDED] flex items-center justify-center text-[#171717] mb-2">
-              <Lock size={18} />
-            </div>
-            <DialogTitle className="text-base font-semibold text-[#171717] tracking-tight">
-              Masuk untuk Memulai Chat
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#666666] mt-1 leading-relaxed">
-              Anda saat ini berada dalam mode Tamu. Untuk menjaga batas kuota dan hak akses informasi sekolah, silakan login dengan akun Anda atau buat akun baru.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-5 flex flex-col sm:flex-row gap-2.5">
-            <Link href="/signup" className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="w-full bg-[#F5F5F5] hover:bg-[#EAEAEA] border-[#EDEDED] text-[#171717] rounded-lg text-xs font-medium cursor-pointer"
-              >
-                <UserPlus size={14} className="mr-1.5" />
-                Daftar Akun
-              </Button>
-            </Link>
-            <Link href="/login" className="w-full sm:w-auto">
-              <Button
-                className="w-full bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer"
-              >
-                <LogIn size={14} className="mr-1.5 text-white" />
-                Masuk Sekarang
-              </Button>
-            </Link>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="border border-[#EDEDED] bg-white text-[#171717] shadow-xl sm:max-w-md p-6 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#171717] tracking-tight">
-              Hapus Percakapan
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#666666] mt-1">
-              Tindakan ini tidak dapat dibatalkan. Semua pesan dalam percakapan ini akan dibersihkan dari layar sesi Anda.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4 flex justify-end gap-2.5">
-            <Button
-              variant="secondary"
-              className="bg-[#F5F5F5] hover:bg-[#EAEAEA] border border-[#EDEDED] text-[#171717] rounded-lg text-xs font-medium cursor-pointer"
-              onClick={() => setShowConfirm(false)}
-            >
-              Batal
-            </Button>
-            <Button
-              className="bg-[#DC3341] hover:bg-[#B91C1C] text-white rounded-lg text-xs font-medium shadow-xs cursor-pointer"
-              onClick={handleClearConfirm}
-            >
-              Hapus
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

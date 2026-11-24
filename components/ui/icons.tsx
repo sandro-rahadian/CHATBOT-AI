@@ -457,3 +457,180 @@ export function Lock({
     </svg>
   );
 }
+
+export function Search({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <circle cx="7" cy="7" r="4.75" />
+        <line x1="10.375" y1="10.375" x2="13.75" y2="13.75" />
+      </g>
+    </svg>
+  );
+}
+
+export function CollapseLeftPanel({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <rect x="2.25" y="2.75" width="11.5" height="10.5" rx="2" />
+        <line x1="6" y1="2.75" x2="6" y2="13.25" />
+        <path d="M10.75 5.75 L8.5 8 L10.75 10.25" />
+      </g>
+    </svg>
+  );
+}
+
+export function Grid({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <rect x="2.25" y="2.25" width="4.25" height="4.25" rx="1" />
+        <rect x="9.5" y="2.25" width="4.25" height="4.25" rx="1" />
+        <rect x="2.25" y="9.5" width="4.25" height="4.25" rx="1" />
+        <rect x="9.5" y="9.5" width="4.25" height="4.25" rx="1" />
+      </g>
+    </svg>
+  );
+}
+
+export function Clock({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <circle cx="8" cy="8" r="6" />
+        <path d="M8 4.75 L8 8 L10.5 9.5" />
+      </g>
+    </svg>
+  );
+}
+
+export function Folder({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <path d="M4.25 3.25 L5.33 3.25 C5.914 3.25 6.469 3.505 6.849 3.948 L7.151 4.302 C7.531 4.745 8.086 5 8.67 5 L11.75 5 C12.855 5 13.75 5.895 13.75 7 L13.75 10.75 C13.75 11.855 12.855 12.75 11.75 12.75 L4.25 12.75 C3.145 12.75 2.25 11.855 2.25 10.75 L2.25 5.25 C2.25 4.145 3.145 3.25 4.25 3.25 Z" />
+      </g>
+    </svg>
+  );
+}
+
+export function Smartphone({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <rect x="4" y="1.75" width="8" height="12.5" rx="2" />
+        <line x1="7" y1="11.75" x2="9" y2="11.75" />
+      </g>
+    </svg>
+  );
+}
+
+export function Bell({
+  size = 24,
+  ...props
+}: React.SVGProps<SVGSVGElement> & { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="0.833"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <g>
+        <path d="M3.75 10.75 V6.5 A4.25 4.25 0 0 1 12.25 6.5 V10.75 L13.25 11.75 H2.75 Z" />
+        <line x1="6.5" y1="13.75" x2="9.5" y2="13.75" />
+      </g>
+    </svg>
+  );
+}

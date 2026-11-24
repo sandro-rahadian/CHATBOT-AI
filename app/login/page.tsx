@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/components/login-form";
 
 export const metadata: Metadata = {
-  title: "Masuk ke KeraVokasi | Asisten AI SMK Malang",
+  title: "Masuk ke KeraVokasi",
   description: "Halaman login pengguna dan demonstrasi role akses (RBAC)",
 };
 
