@@ -99,7 +99,7 @@ function ChatBubble({ message }: { message: Message }) {
             </p>
           </div>
         </div>
-        <span className="text-[10px] text-[#DC2626]/70 font-mono px-1">
+        <span className="text-[10px] text-[#DC2626]/70 font-normal px-1">
           {timeStr}
         </span>
       </motion.div>
@@ -119,7 +119,7 @@ function ChatBubble({ message }: { message: Message }) {
             {message.content}
           </p>
         </div>
-        <span className="text-[10px] text-[#8C8C8C] font-mono px-1">
+        <span className="text-[10px] text-[#8C8C8C] font-normal px-1">
           {timeStr}
         </span>
       </motion.div>
@@ -169,16 +169,8 @@ function ChatBubble({ message }: { message: Message }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-1">
-          {message.userRole && (
-            <span className="text-[10px] text-[#8C8C8C]">
-              Respons mode:{" "}
-              <span className="font-semibold text-[#262626]">
-                {message.userRole}
-              </span>
-            </span>
-          )}
-          <span className="text-[10px] text-[#8C8C8C] font-mono ml-auto">
+        <div className="flex items-center justify-end pt-1">
+          <span className="text-[10px] text-[#8C8C8C] font-normal">
             {timeStr}
           </span>
         </div>
