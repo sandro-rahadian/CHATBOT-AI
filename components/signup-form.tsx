@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { setSession } from "@/lib/session";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -85,10 +86,7 @@ export function SignupForm({
       }
 
       const data = await res.json();
-      localStorage.setItem("chat_token", data.token);
-      if (data.user) {
-        localStorage.setItem("chat_user", JSON.stringify(data.user));
-      }
+      setSession(data.token, data.user || undefined);
 
       router.push("/");
     } catch (err) {

@@ -15,6 +15,15 @@ import {
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { CurvedCarousel } from "@/components/ui/curved-carousel";
 import { useSmoothScroll } from "@/components/ui/smooth-scroll";
+import {
+  getSessionStatus,
+  getStoredToken,
+  touchSession,
+  clearSession,
+  updateSessionUser,
+  SESSION_MAX_MS,
+  SESSION_IDLE_MS,
+} from "@/lib/session";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,6 +175,9 @@ export default function ChatPage() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
+  // Notifikasi sesi (login kedaluwarsa / idle timeout)
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+
   // Chat History / Multi-Session State
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -175,10 +187,7 @@ export default function ChatPage() {
     "https://chatbot-ai-production-b22e59af.up.railway.app";
 
   const isLoggedIn =
-    Boolean(
-      apiToken ||
-        (typeof window !== "undefined" && localStorage.getItem("chat_token"))
-    ) && (currentUser ? currentUser.role !== "guest" : true);
+    Boolean(apiToken) && (currentUser ? currentUser.role !== "guest" : true);
 
   // Fetch /me profile
   const fetchProfile = useCallback(
@@ -191,15 +200,18 @@ export default function ChatPage() {
         if (res.ok) {
           const profile: UserProfile = await res.json();
           setCurrentUser(profile);
-          localStorage.setItem("chat_user", JSON.stringify(profile));
+          updateSessionUser(profile);
         } else if (res.status === 401 && token) {
-          localStorage.removeItem("chat_token");
-          localStorage.removeItem("chat_user");
+          // Hanya clear session jika server eksplisit menolak token (401)
+          clearSession();
           setApiToken(null);
           setCurrentUser(null);
           setConversations([]);
           setMessages([]);
           setActiveConversationId(null);
+          setSessionNotice(
+            "Sesi tidak valid atau sudah berakhir. Silakan login kembali."
+          );
         }
       } catch (e) {
         console.error("Gagal mengambil profil user:", e);
@@ -307,15 +319,32 @@ export default function ChatPage() {
     [apiBase, apiToken, activeConversationId]
   );
 
+  // Notifikasi sesi berakhir, dipakai bareng di beberapa tempat
+  const sessionExpiredMessage = useCallback(
+    (reason: "expired" | "idle") =>
+      reason === "idle"
+        ? `Sesi berakhir karena tidak ada aktivitas selama ${Math.round(
+            SESSION_IDLE_MS / 60_000
+          )} menit. Silakan login kembali.`
+        : `Sesi login Anda sudah berakhir setelah ${Math.round(
+            SESSION_MAX_MS / 3_600_000
+          )} jam. Silakan login kembali.`,
+    []
+  );
+
   // Initial load
   useEffect(() => {
-    const savedToken = localStorage.getItem("chat_token");
-    const savedUser = localStorage.getItem("chat_user");
+    // getSessionStatus() sudah memvalidasi batas absolut + idle timeout
+    // dan otomatis membersihkan sesi yang sudah mati.
+    const status = getSessionStatus();
+    const savedToken = status.session?.token ?? null;
+    const savedUser = status.session?.user ?? null;
+
     if (savedToken) {
       setApiToken(savedToken);
       if (savedUser) {
         try {
-          setCurrentUser(JSON.parse(savedUser));
+          setCurrentUser(savedUser as unknown as UserProfile);
         } catch {
           // ignore parsing error
         }
@@ -323,24 +352,84 @@ export default function ChatPage() {
       fetchProfile(savedToken);
       fetchConversations(savedToken);
     } else {
+      clearSession();
       setApiToken(null);
       setCurrentUser(null);
       setConversations([]);
       setMessages([]);
       setActiveConversationId(null);
       fetchProfile(null);
+
+      if (status.reason === "expired" || status.reason === "idle") {
+        setSessionNotice(sessionExpiredMessage(status.reason));
+      }
     }
-  }, [fetchProfile, fetchConversations]);
+  }, [fetchProfile, fetchConversations, sessionExpiredMessage]);
+
+  // Force logout saat sesi tidak valid lagi
+  const forceLogout = useCallback(
+    (reason: "expired" | "idle") => {
+      clearSession();
+      setApiToken(null);
+      setCurrentUser(null);
+      setConversations([]);
+      setMessages([]);
+      setActiveConversationId(null);
+      setInputValue("");
+      setIsProfileMenuOpen(true);
+      setSessionNotice(sessionExpiredMessage(reason));
+    },
+    [sessionExpiredMessage]
+  );
+
+  // Watcher sesi: cek tiap 30 detik dan setiap tab kembali aktif
+  useEffect(() => {
+    const evaluate = () => {
+      if (!apiToken) return;
+      const status = getSessionStatus();
+      if (!status.valid && (status.reason === "expired" || status.reason === "idle")) {
+        forceLogout(status.reason);
+      }
+    };
+
+    evaluate();
+    const interval = window.setInterval(evaluate, 30_000);
+
+    const handleVisible = () => {
+      if (!document.hidden) evaluate();
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+    window.addEventListener("focus", handleVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.removeEventListener("focus", handleVisible);
+    };
+  }, [apiToken, forceLogout]);
+
+  // Activity tracker: interaksi user memperpanjang jendela idle
+  useEffect(() => {
+    const markActive = () => touchSession();
+    const events: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "wheel",
+      "touchstart",
+    ];
+    events.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }));
+    return () => events.forEach((ev) => window.removeEventListener(ev, markActive));
+  }, []);
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem("chat_token");
-    localStorage.removeItem("chat_user");
+    clearSession();
     setApiToken(null);
     setCurrentUser(null);
     setConversations([]);
     setMessages([]);
     setActiveConversationId(null);
+    setSessionNotice(null);
   };
 
   // Scroll handler: Detect if user intentionally scrolled up to read history
@@ -366,9 +455,7 @@ export default function ChatPage() {
 
   const handleSend = async (userMessage: string) => {
     isUserScrolledUp.current = false;
-    const activeToken =
-      apiToken ||
-      (typeof window !== "undefined" ? localStorage.getItem("chat_token") : null);
+    const activeToken = apiToken || getStoredToken();
 
     // Strict Login Guard: Guest cannot send chat messages -> trigger bottom sidebar login menu
     if (!activeToken && (!currentUser || currentUser.role === "guest")) {
@@ -394,9 +481,7 @@ export default function ChatPage() {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      const tokenToSend =
-        apiToken ||
-        (typeof window !== "undefined" ? localStorage.getItem("chat_token") : null);
+      const tokenToSend = apiToken || getStoredToken();
       if (tokenToSend) {
         headers["x-api-token"] = tokenToSend;
       }
@@ -507,6 +592,22 @@ export default function ChatPage() {
             : "overflow-hidden flex flex-col"
         }`}
       >
+        {sessionNotice && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 w-[min(92%,560px)]">
+            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 shadow-sm">
+              <span className="flex-1 leading-relaxed">{sessionNotice}</span>
+              <button
+                type="button"
+                onClick={() => setSessionNotice(null)}
+                aria-label="Tutup notifikasi sesi"
+                className="shrink-0 font-semibold text-amber-700 transition-colors hover:text-amber-950"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           /* ── MiniMax Code Hero & Empty State ── */
           <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
