@@ -11,6 +11,7 @@ import {
   type UserProfile,
   type ConversationItem,
 } from "@/components/sidebar-dock-menu";
+import { HistoryModal } from "@/components/history-modal";
 
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { CurvedCarousel } from "@/components/ui/curved-carousel";
@@ -34,12 +35,21 @@ interface SourceItem {
   title: string;
 }
 
+interface AttachedImage {
+  id: string;
+  name: string;
+  mimeType: string;
+  data: string;
+  previewUrl: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
   sources?: SourceItem[];
+  images?: Array<{ previewUrl: string; mimeType: string; name?: string }>;
   userRole?: string;
   isError?: boolean;
 }
@@ -117,13 +127,32 @@ function ChatBubble({ message }: { message: Message }) {
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-        className="flex flex-col items-end gap-1 max-w-[80%] sm:max-w-[70%] ml-auto"
+        className="flex flex-col items-end gap-1.5 max-w-[80%] sm:max-w-[70%] ml-auto"
       >
-        <div className="bg-[#171717] text-white rounded-2xl rounded-br-sm px-4 py-2.5 shadow-xs">
-          <p className="text-sm font-normal leading-relaxed tracking-normal whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
-        </div>
+        {message.images && message.images.length > 0 && (
+          <div className="flex flex-wrap justify-end gap-2">
+            {message.images.map((img, idx) => (
+              <div
+                key={idx}
+                className="overflow-hidden rounded-xl border border-[#E5E5E5] bg-white shadow-xs max-w-[240px]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.previewUrl}
+                  alt={img.name || `Lampiran gambar ${idx + 1}`}
+                  className="max-h-[200px] w-auto object-cover block"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {message.content && (
+          <div className="bg-[#171717] text-white rounded-2xl rounded-br-sm px-4 py-2.5 shadow-xs">
+            <p className="text-sm font-normal leading-relaxed tracking-normal whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          </div>
+        )}
         <span className="text-[10px] text-[#8C8C8C] font-normal px-1">
           {timeStr}
         </span>
@@ -165,6 +194,9 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isUserScrolledUp = useRef(false);
@@ -453,6 +485,81 @@ export default function ChatPage() {
     !apiToken &&
     (!currentUser || currentUser.role === "guest");
 
+  // Keyboard shortcut Cmd/Ctrl + K untuk membuka History Pop-up
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsHistoryModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Proses file gambar (upload file / paste clipboard) menjadi base64 untuk analisis multimodal AI
+  const processImageFiles = useCallback((files: FileList | File[]) => {
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const maxBytes = 5 * 1024 * 1024; // 5MB per image
+    const incoming = Array.from(files).filter((f) => allowed.has(f.type));
+    if (incoming.length === 0) return;
+
+    incoming.forEach((file) => {
+      if (file.size > maxBytes) {
+        setError(`Ukuran gambar "${file.name}" melebihi batas 5MB.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === "string" ? reader.result : "";
+        if (!result) return;
+        const base64 = result.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+        setAttachedImages((prev) => {
+          if (prev.length >= 4) return prev;
+          return [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              name: file.name || "gambar.png",
+              mimeType: file.type,
+              data: base64,
+              previewUrl: result,
+            },
+          ];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processImageFiles(e.target.files);
+    }
+    e.target.value = "";
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      processImageFiles(imageFiles);
+    }
+  };
+
+  const removeAttachedImage = (id: string) => {
+    setAttachedImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
   const handleSend = async (userMessage: string) => {
     isUserScrolledUp.current = false;
     const activeToken = apiToken || getStoredToken();
@@ -463,17 +570,24 @@ export default function ChatPage() {
       return;
     }
 
-    if (!userMessage.trim() || isLoading) return;
+    const imagesToSend = [...attachedImages];
+    if ((!userMessage.trim() && imagesToSend.length === 0) || isLoading) return;
 
     const newUserMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: userMessage.trim(),
+      images: imagesToSend.map((img) => ({
+        previewUrl: img.previewUrl,
+        mimeType: img.mimeType,
+        name: img.name,
+      })),
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, newUserMsg]);
     setInputValue("");
+    setAttachedImages([]);
     setIsLoading(true);
     setError(null);
 
@@ -492,6 +606,13 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: newUserMsg.content,
           conversation_id: activeConversationId || undefined,
+          images:
+            imagesToSend.length > 0
+              ? imagesToSend.map((img) => ({
+                  mimeType: img.mimeType,
+                  data: img.data,
+                }))
+              : undefined,
           history: messages.map((m) => ({
             role: m.role,
             content: m.content,
@@ -528,7 +649,7 @@ export default function ChatPage() {
 
       if (data.conversation_id) {
         setActiveConversationId(data.conversation_id);
-        fetchConversations(apiToken);
+        fetchConversations(tokenToSend);
       }
 
       if (currentUser && currentUser.role !== "admin") {
@@ -541,7 +662,7 @@ export default function ChatPage() {
             : null
         );
       }
-      fetchProfile(apiToken);
+      fetchProfile(tokenToSend);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Gagal terhubung ke server.";
@@ -569,14 +690,39 @@ export default function ChatPage() {
 
   return (
     <div className="relative flex flex-row h-screen w-screen bg-[#FAFAFA] text-[#171717] overflow-hidden select-none">
+      {/* Hidden File Input for Multimodal Image Analysis */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        multiple
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
+      {/* ── Antigravity-Style History Pop-up Modal ── */}
+      <HistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
+        currentUser={currentUser}
+        apiBase={apiBase}
+        apiToken={apiToken}
+        onSelectConversation={(id) => loadConversation(id, apiToken || getStoredToken())}
+        onDeleteConversation={handleDeleteConversation}
+        onNewChat={handleNewChat}
+      />
+
       {/* ── MiniMax Left Navigation Sidebar ── */}
       <SidebarDockMenu
         currentUser={currentUser}
         conversations={conversations}
         activeConversationId={activeConversationId}
-        onSelectConversation={(id) => loadConversation(id, apiToken)}
+        onSelectConversation={(id) => loadConversation(id, apiToken || getStoredToken())}
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
+        onOpenHistoryModal={() => setIsHistoryModalOpen(true)}
         onLogout={handleLogout}
         isProfileMenuOpen={isProfileMenuOpen}
         onProfileMenuOpenChange={setIsProfileMenuOpen}
@@ -618,7 +764,7 @@ export default function ChatPage() {
                 animate={{ opacity: 1 }}
                 className="text-[28px] sm:text-[34px] font-semibold text-[#171717] tracking-[-0.02em] text-center mb-7 flex items-center justify-center flex-wrap"
               >
-                {"Arek vokasi kate nggolek opo?".split("").map((char, i) => (
+                {"Sebaiknya kita mulai dari mana?".split("").map((char, i) => (
                   <motion.span
                     key={i}
                     initial={{ opacity: 0, y: 14 }}
@@ -645,6 +791,35 @@ export default function ChatPage() {
                 transition={{ type: "spring", stiffness: 120, damping: 16 }}
                 className="w-full max-w-[720px] bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 p-4 flex flex-col justify-between min-h-[142px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1 relative group outline-none"
               >
+                {/* Attached Image Previews */}
+                {attachedImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pb-2.5">
+                    {attachedImages.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative group/img w-14 h-14 rounded-xl overflow-hidden border border-[#E5E5E5] bg-[#FAFAFA] shrink-0"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.previewUrl}
+                          alt={img.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeAttachedImage(img.id)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer"
+                          title="Hapus gambar"
+                        >
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Editable Prompt Area */}
                 <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
                   <textarea
@@ -652,8 +827,9 @@ export default function ChatPage() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     disabled={isLoading}
-                    placeholder="Ask anything or use / to use Skill..."
+                    placeholder="Ask anything, paste an image, or use / to use Skill..."
                     rows={2}
                     className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
                   />
@@ -661,8 +837,8 @@ export default function ChatPage() {
 
                 {/* Omnibox Bottom Toolbar Row */}
                 <div className="flex items-center justify-between pt-3 border-t border-transparent">
-                  {/* Left: Attachment + Popover Dropdown with Codigo Micro-Interactions */}
-                  <div className="relative">
+                  {/* Left: Attachment + Image Upload + Popover Dropdown */}
+                  <div className="relative flex items-center gap-1.5">
                     <motion.button
                       type="button"
                       whileHover={{ scale: 1.08 }}
@@ -679,6 +855,22 @@ export default function ChatPage() {
                       </svg>
                     </motion.button>
 
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading || attachedImages.length >= 4}
+                      className="w-8 h-8 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-colors cursor-pointer disabled:opacity-40"
+                      title="Lampirkan gambar untuk dianalisis AI"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect height="18" rx="2" strokeWidth="1.8" width="18" x="3" y="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.8" />
+                        <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                      </svg>
+                    </motion.button>
+
                     {/* Popover Menu matching Reference Screen */}
                     <AnimatePresence>
                       {showAttachmentMenu && (
@@ -692,6 +884,7 @@ export default function ChatPage() {
                           <div
                             onClick={() => {
                               setShowAttachmentMenu(false);
+                              fileInputRef.current?.click();
                             }}
                             className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
@@ -784,7 +977,7 @@ export default function ChatPage() {
                   {/* Right: Codigo Animated Send CTA */}
                   <div className="flex items-center gap-2">
                     <AnimatePresence mode="wait">
-                      {inputValue.trim().length > 0 ? (
+                      {inputValue.trim().length > 0 || attachedImages.length > 0 ? (
                         <motion.button
                           key="send-active"
                           type="button"
@@ -961,6 +1154,35 @@ export default function ChatPage() {
                 transition={{ type: "spring", stiffness: 260, damping: 24 }}
                 className="pointer-events-auto w-full max-w-[760px] bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.13)] hover:-translate-y-1.5 p-3.5 flex flex-col justify-between min-h-[114px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.14)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1.5 relative group outline-none"
               >
+                {/* Attached Image Previews */}
+                {attachedImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pb-2">
+                    {attachedImages.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative group/img w-12 h-12 rounded-xl overflow-hidden border border-[#E5E5E5] bg-[#FAFAFA] shrink-0"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.previewUrl}
+                          alt={img.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeAttachedImage(img.id)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer"
+                          title="Hapus gambar"
+                        >
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Editable Prompt Area */}
                 <div className="w-full flex items-start text-[14px] leading-relaxed text-[#171717] pt-0.5">
                   <textarea
@@ -968,8 +1190,9 @@ export default function ChatPage() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     disabled={isLoading}
-                    placeholder="Ask a follow up question..."
+                    placeholder="Ask a follow up question or paste an image..."
                     rows={2}
                     className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
                   />
@@ -977,7 +1200,7 @@ export default function ChatPage() {
 
                 {/* Omnibox Bottom Toolbar Row */}
                 <div className="flex items-center justify-between pt-2 border-t border-transparent">
-                  <div className="relative">
+                  <div className="relative flex items-center gap-1.5">
                     <motion.button
                       type="button"
                       whileHover={{ scale: 1.08 }}
@@ -994,6 +1217,22 @@ export default function ChatPage() {
                       </svg>
                     </motion.button>
 
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading || attachedImages.length >= 4}
+                      className="w-8 h-8 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#525252] hover:bg-[#F5F5F5] hover:text-[#171717] transition-colors cursor-pointer disabled:opacity-40"
+                      title="Lampirkan gambar untuk dianalisis AI"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect height="18" rx="2" strokeWidth="1.8" width="18" x="3" y="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.8" />
+                        <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+                      </svg>
+                    </motion.button>
+
                     {/* Popover Menu matching Reference Screen */}
                     <AnimatePresence>
                       {showAttachmentMenu && (
@@ -1005,7 +1244,10 @@ export default function ChatPage() {
                           className="absolute bottom-10 left-0 w-48 bg-white rounded-xl shadow-lg border border-[#EDEDED] py-1 text-xs text-[#262626] z-50"
                         >
                           <div
-                            onClick={() => setShowAttachmentMenu(false)}
+                            onClick={() => {
+                              setShowAttachmentMenu(false);
+                              fileInputRef.current?.click();
+                            }}
                             className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#F5F5F5] cursor-pointer transition-colors"
                           >
                             <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1042,7 +1284,7 @@ export default function ChatPage() {
 
                   <div className="flex items-center gap-2">
                     <AnimatePresence mode="wait">
-                      {inputValue.trim().length > 0 ? (
+                      {inputValue.trim().length > 0 || attachedImages.length > 0 ? (
                         <motion.button
                           key="send-bottom-active"
                           type="button"

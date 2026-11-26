@@ -26,13 +26,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export function SignupForm({
   className,
@@ -42,7 +35,6 @@ export function SignupForm({
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const role = "siswa"; // Otomatis terdaftar sebagai siswa
-  const [schoolId, setSchoolId] = useState<string>("all");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,8 +59,6 @@ export function SignupForm({
 
     setIsLoading(true);
     try {
-      const parsedSchoolId = schoolId === "all" ? null : parseInt(schoolId, 10);
-
       const res = await fetch(`${apiBase}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,7 +66,7 @@ export function SignupForm({
           username: username.trim(),
           password: password.trim(),
           role,
-          school_id: parsedSchoolId,
+          school_id: null,
         }),
       });
 
@@ -167,35 +157,6 @@ export function SignupForm({
                   className="bg-white border border-[#D4D4D8] text-sm text-[#171717] focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none placeholder:text-[#8C8C8C] rounded-full h-11 px-4 transition-colors"
                   required
                 />
-              </Field>
-
-              {/* School Isolation Selection */}
-              <Field>
-                <FieldLabel htmlFor="school-select" className="text-xs text-[#171717] font-medium">
-                  Asal Sekolah (Opsional)
-                </FieldLabel>
-                <Select value={schoolId} onValueChange={setSchoolId}>
-                  <SelectTrigger className="w-full bg-white border border-[#D4D4D8] text-sm text-[#171717] rounded-full h-11 px-4 focus:border-[#171717] focus:ring-0 focus-visible:ring-0 outline-none focus:outline-none transition-colors">
-                    <SelectValue placeholder="Pilih sekolah" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-[#171717] text-xs text-[#171717] rounded-xl shadow-xl">
-                    <SelectItem value="all" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      Semua Sekolah (Umum)
-                    </SelectItem>
-                    <SelectItem value="1" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      SMK Telkom Malang
-                    </SelectItem>
-                    <SelectItem value="2" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      SMKN 4 Malang (Grafika)
-                    </SelectItem>
-                    <SelectItem value="3" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      SMKN 5 Malang
-                    </SelectItem>
-                    <SelectItem value="4" className="cursor-pointer py-2 focus:bg-[#F5F5F5] focus:text-[#171717]">
-                      SMKN 3 Malang
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
               </Field>
 
               {/* Password Field */}

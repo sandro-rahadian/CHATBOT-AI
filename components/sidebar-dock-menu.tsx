@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   Message,
   Plus,
@@ -13,10 +12,7 @@ import {
   ChevronRight,
   Search,
   CollapseLeftPanel,
-  Grid,
   Clock,
-  Folder,
-  Smartphone,
 } from "@/components/ui/icons";
 
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +48,7 @@ interface SidebarDockMenuProps {
   onSelectConversation?: (id: string) => void;
   onNewChat?: () => void;
   onDeleteConversation?: (id: string) => void;
+  onOpenHistoryModal?: () => void;
   onLogout: () => void;
   isProfileMenuOpen?: boolean;
   onProfileMenuOpenChange?: (open: boolean) => void;
@@ -90,6 +87,7 @@ export function SidebarDockMenu({
   onSelectConversation,
   onNewChat,
   onDeleteConversation,
+  onOpenHistoryModal,
   onLogout,
   isProfileMenuOpen,
   onProfileMenuOpenChange,
@@ -124,7 +122,12 @@ export function SidebarDockMenu({
         <div className="flex flex-col gap-3 min-h-0 flex-1 overflow-hidden">
           {/* Brand & Collapse Header */}
           <div className="flex items-center justify-between px-1 py-0.5 shrink-0 min-h-[36px]">
-            <div className="flex items-center gap-2 overflow-hidden">
+            <button
+              type="button"
+              onClick={onNewChat}
+              className="flex items-center gap-2 overflow-hidden rounded-lg px-1 py-0.5 -ml-1 hover:bg-[#EDEDED]/80 transition-colors cursor-pointer text-left"
+              title="Mulai percakapan baru"
+            >
               {/* KeraVokasi Logo */}
               <div className="w-7 h-7 flex items-center justify-center shrink-0 overflow-hidden">
                 <Image
@@ -144,7 +147,7 @@ export function SidebarDockMenu({
                   </span>
                 </div>
               )}
-            </div>
+            </button>
 
             {/* Header Icons: Search & Collapse from IconMCP */}
             <div className="flex items-center gap-0.5 text-[#737373] shrink-0">
@@ -152,8 +155,9 @@ export function SidebarDockMenu({
                 <>
                   <button
                     type="button"
+                    onClick={onOpenHistoryModal}
                     className="p-1 rounded-md hover:bg-[#EDEDED] hover:text-[#171717] transition-colors cursor-pointer"
-                    title="Search"
+                    title="Cari & Buka Riwayat (⌘K)"
                   >
                     <Search size={15} />
                   </button>
@@ -207,64 +211,37 @@ export function SidebarDockMenu({
             )}
           </div>
 
-          {/* ── MiniMax Standard Nav Links (All IconMCP) ──────────────────── */}
+          {/* ── MiniMax Standard Nav Links ──────────────────── */}
           <nav className="flex flex-col gap-0.5 text-xs text-[#404040] shrink-0">
-            <Link
-              href="#"
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[#EDEDED]/80 font-normal transition-colors ${
+            <button
+              type="button"
+              onClick={onOpenHistoryModal}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[#EDEDED]/80 font-normal transition-colors cursor-pointer ${
                 !isOpen ? "justify-center px-1" : ""
               }`}
-              title="Plugins · Skills"
-            >
-              <Grid size={15} className="text-[#737373] shrink-0" />
-              {isOpen && <span>Plugins · Skills</span>}
-            </Link>
-
-            <Link
-              href="#"
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[#EDEDED]/80 font-normal transition-colors ${
-                !isOpen ? "justify-center px-1" : ""
-              }`}
-              title="Scheduled"
+              title="Riwayat Percakapan"
             >
               <Clock size={15} className="text-[#737373] shrink-0" />
-              {isOpen && <span>Scheduled</span>}
-            </Link>
-
-            <Link
-              href="#"
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[#EDEDED]/80 font-normal transition-colors ${
-                !isOpen ? "justify-center px-1" : ""
-              }`}
-              title="Assets"
-            >
-              <Folder size={15} className="text-[#737373] shrink-0" />
-              {isOpen && <span>Assets</span>}
-            </Link>
-
-            <Link
-              href="#"
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[#EDEDED]/80 font-normal transition-colors ${
-                !isOpen ? "justify-center px-1" : ""
-              }`}
-              title="Connect mobile"
-            >
-              <Smartphone size={15} className="text-[#737373] shrink-0" />
-              {isOpen && <span>Connect mobile</span>}
-            </Link>
+              {isOpen && <span>History</span>}
+            </button>
           </nav>
 
           {/* ── Section Dividers: More / Projects / Recents ─────────────────── */}
           {isOpen && (
             <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden pt-1">
-              <div className="flex items-center justify-between px-2 text-[11px] text-[#A3A3A3] font-medium shrink-0">
+              <button
+                type="button"
+                onClick={onOpenHistoryModal}
+                className="w-full flex items-center justify-between px-2 py-0.5 rounded-md hover:bg-[#EDEDED]/60 text-[11px] text-[#A3A3A3] hover:text-[#525252] font-medium shrink-0 transition-colors cursor-pointer"
+                title="Buka jendela Riwayat Percakapan"
+              >
                 <span>Recents</span>
                 {conversations.length > 0 && (
                   <span className="font-mono text-[10px] text-[#737373]">
                     {conversations.length}
                   </span>
                 )}
-              </div>
+              </button>
 
               {/* Chat History List */}
               <div className="flex flex-col gap-0.5 overflow-y-auto pr-1 flex-1 min-h-0">
