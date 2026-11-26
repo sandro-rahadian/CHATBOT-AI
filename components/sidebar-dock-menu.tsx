@@ -125,7 +125,7 @@ export function SidebarDockMenu({
             <button
               type="button"
               onClick={onNewChat}
-              className="flex items-center gap-2 overflow-hidden rounded-lg px-1 py-0.5 -ml-1 hover:bg-[#EDEDED]/80 transition-colors cursor-pointer text-left"
+              className="flex items-center gap-2 overflow-hidden px-1 py-0.5 -ml-1 cursor-pointer text-left"
               title="Mulai percakapan baru"
             >
               {/* KeraVokasi Logo */}
