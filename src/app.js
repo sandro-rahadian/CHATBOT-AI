@@ -53,7 +53,7 @@ export function createApp({
   const app = express();
 
   app.use(cors(corsOptions));
-  app.use(express.json({ limit: "100kb" }));
+  app.use(express.json({ limit: "25mb" }));
 
   // GET /health - Pengecekan status server
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -401,23 +401,42 @@ export function createApp({
 
     let activeConv = null;
     try {
-      const contents = toGeminiContents(parsed.history, parsed.message);
+      const hasImages = Array.isArray(parsed.images) && parsed.images.length > 0;
+      const contents = toGeminiContents(parsed.history, parsed.message, parsed.images);
       const cached = getCachedKnowledgeItems();
       const allItems = (cached && cached.length > 0) ? cached : loadKnowledgeBase();
 
-      // 4. Seleksi Basis Pengetahuan Efisien
-      const { selectedItems, includeGuide } = selectRelevantKnowledge(
+      // 4. Seleksi Basis Pengetahuan Efisien (Sumber 1 Database & Sumber 2 Dokumen .md)
+      let { selectedItems, includeGuide } = selectRelevantKnowledge(
         parsed.message,
         allItems,
         user.allowedCategories,
         user.schoolId
       );
 
+      // Saat user melampirkan gambar, pastikan ketiga sumber (Database, Dokumen .md, Web Search) tersedia
+      if (hasImages) {
+        includeGuide = true;
+        if (selectedItems.length === 0 && allItems.length > 0) {
+          selectedItems = allItems
+            .filter((item) => {
+              const catOk = isCategoryAllowed(item.category, user.allowedCategories);
+              const schoolOk = !user.schoolId || item.school_id === user.schoolId;
+              return catOk && schoolOk;
+            })
+            .slice(0, 12);
+        }
+      }
+
       const guideDoc = includeGuide ? loadGuideDocument() : "";
 
-      // Cek apakah membutuhkan pencarian web Tavily (khusus guru & admin)
+      // Cek apakah membutuhkan pencarian web Tavily (Sumber 3: guru, admin, atau analisis gambar)
       let webResultsText = "";
-      if (user.canWebSearch && typeof searchWeb === "function" && shouldPerformWebSearch(parsed.message)) {
+      const allowWebSearch =
+        typeof searchWeb === "function" &&
+        (user.canWebSearch || hasImages) &&
+        shouldPerformWebSearch(parsed.message);
+      if (allowWebSearch) {
         try {
           const tavilyRes = await searchWeb(parsed.message);
           if (tavilyRes) {
@@ -445,12 +464,12 @@ export function createApp({
           activeConv = await createConversation({
             id: parsed.conversation_id || undefined,
             userId: user.id,
-            title: parsed.message.slice(0, 45),
+            title: (hasImages ? `[Gambar] ${parsed.message}` : parsed.message).slice(0, 45),
           });
         }
         await appendMessageToConversation(activeConv.id, {
           role: "user",
-          content: parsed.message,
+          content: hasImages ? `[Gambar terlampir] ${parsed.message}` : parsed.message,
         });
       }
 

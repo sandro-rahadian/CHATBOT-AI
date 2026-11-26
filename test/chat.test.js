@@ -743,3 +743,33 @@ test("Context Window Session: Permintaan berulang dalam 1 session hanya menghasi
   assert.equal(conversation.messages.length, 6, "Seluruh 6 pesan harus tersimpan dalam 1 thread percakapan");
 });
 
+test("Multimodal Image Input: toGeminiContents & POST /chat mendukung gambar base64", async () => {
+  const sampleBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+  // 1. Unit test toGeminiContents dengan gambar
+  const contents = toGeminiContents([], "Apa jurusan di brosur ini?", [
+    { mimeType: "image/png", data: sampleBase64 },
+  ]);
+  assert.equal(contents.length, 1);
+  assert.equal(contents[0].parts.length, 2);
+  assert.deepStrictEqual(contents[0].parts[0], {
+    inlineData: { mimeType: "image/png", data: sampleBase64 },
+  });
+  assert.deepStrictEqual(contents[0].parts[1], { text: "Apa jurusan di brosur ini?" });
+
+  // 2. Integration test POST /chat dengan gambar tanpa teks pesan (fallback prompt otomatis)
+  const res = await post({
+    message: "",
+    images: [{ mimeType: "image/png", data: `data:image/png;base64,${sampleBase64}` }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok(lastContents.at(-1).parts.some((p) => p.inlineData?.mimeType === "image/png"));
+
+  // 3. Validasi format gambar tidak didukung -> 400
+  const resBad = await post({
+    message: "Tes",
+    images: [{ mimeType: "application/pdf", data: sampleBase64 }],
+  });
+  assert.equal(resBad.status, 400);
+});
+

@@ -2,9 +2,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MODEL_NAME, TIMEOUT_MS, MAX_MESSAGE_LENGTH, MAX_HISTORY } from "../config.js";
 import { buildSystemPrompt } from "./knowledge.js";
-import { databaseAgentTools } from "./tools.js";
+import { databaseAgentTools, webSearchAgentToolDeclaration } from "./tools.js";
 import { getDbSchemaDescription, executeDbQueryTool } from "../db/schema.js";
 import { getDbPool } from "../db/pool.js";
+import { searchWebFallback, formatTavilyResults } from "./search.js";
 
 /**
  * Ekstraksi teks dari response Gemini secara aman tanpa memicu exception
@@ -22,16 +23,55 @@ function extractResponseText(response) {
   return textParts.join("\n").trim();
 }
 
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BASE64_LENGTH = 15 * 1024 * 1024; // ~11MB binary per image
+
 /**
- * Validasi body request dari frontend. Return { error } atau { message, history, conversation_id }.
+ * Validasi body request dari frontend. Return { error } atau { message, history, conversation_id, images }.
  */
 export function validateChatBody(body) {
-  const { message, history = [], conversation_id } = body ?? {};
+  const { message, history = [], conversation_id, images = [] } = body ?? {};
 
-  if (typeof message !== "string" || message.trim() === "") {
+  if (!Array.isArray(images)) {
+    return { error: "Field 'images' harus berupa array" };
+  }
+  if (images.length > MAX_IMAGES) {
+    return { error: `Maksimal ${MAX_IMAGES} gambar per pesan` };
+  }
+
+  const normalizedImages = [];
+  for (const img of images) {
+    if (!img || typeof img.mimeType !== "string" || typeof img.data !== "string") {
+      return { error: "Setiap item 'images' harus berbentuk { mimeType: string, data: string }" };
+    }
+    const mimeType = img.mimeType.trim().toLowerCase();
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+      return { error: `Format gambar tidak didukung (${mimeType}). Gunakan JPG, PNG, WebP, atau GIF.` };
+    }
+    // Strip optional data URL prefix (e.g. "data:image/png;base64,")
+    const base64Data = img.data.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "").trim();
+    if (!base64Data) {
+      return { error: "Data gambar tidak boleh kosong" };
+    }
+    if (base64Data.length > MAX_IMAGE_BASE64_LENGTH) {
+      return { error: "Ukuran gambar terlalu besar (maksimal ~5MB per gambar)" };
+    }
+    normalizedImages.push({ mimeType, data: base64Data });
+  }
+
+  const hasImages = normalizedImages.length > 0;
+  const trimmedMessage = typeof message === "string" ? message.trim() : "";
+
+  if (!hasImages && trimmedMessage === "") {
     return { error: "Field 'message' wajib diisi dan tidak boleh kosong" };
   }
-  if (message.length > MAX_MESSAGE_LENGTH) {
+  if (typeof message === "string" && message.length > MAX_MESSAGE_LENGTH) {
     return { error: `Pesan terlalu panjang (maksimal ${MAX_MESSAGE_LENGTH} karakter)` };
   }
   if (!Array.isArray(history)) {
@@ -49,25 +89,44 @@ export function validateChatBody(body) {
     }
   }
   return {
-    message: message.trim(),
+    message:
+      trimmedMessage ||
+      "Tolong analisis gambar yang saya lampirkan ini dan berikan informasi lengkapnya berdasarkan database sekolah, dokumen panduan, dan informasi terbaru.",
     history,
     conversation_id: typeof conversation_id === "string" && conversation_id.trim() !== "" ? conversation_id.trim() : null,
+    images: normalizedImages,
   };
 }
 
 /**
  * Ubah riwayat percakapan frontend ke format Gemini (role 'assistant' -> 'model').
+ * Mendukung lampiran gambar multimodal (inlineData) pada pesan terakhir user.
  */
-export function toGeminiContents(history, message) {
+export function toGeminiContents(history, message, images = []) {
   const trimmed = history.slice(-MAX_HISTORY);
   while (trimmed.length > 0 && trimmed[0].role === "assistant") trimmed.shift();
+
+  const userParts = [];
+  if (Array.isArray(images) && images.length > 0) {
+    for (const img of images) {
+      if (img?.mimeType && img?.data) {
+        userParts.push({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.data,
+          },
+        });
+      }
+    }
+  }
+  userParts.push({ text: message });
 
   return [
     ...trimmed.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     })),
-    { role: "user", parts: [{ text: message }] },
+    { role: "user", parts: userParts },
   ];
 }
 
@@ -163,17 +222,34 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
     const baseInstruction = dynamicSystemInstruction || defaultSystemInstruction || buildSystemPrompt();
     const pool = getDbPool();
     const hasDb = Boolean(pool);
+    const hasWebSearch = Boolean(process.env.TAVILY_API_KEY);
 
-    const fullSystemInstruction = hasDb
-      ? `${baseInstruction}\n\n=== KEMAMPUAN AGENTIC DATABASE (FUNCTION CALLING) ===\n${getDbSchemaDescription()}\nKamu dapat menggunakan tool 'execute_sql_query' kapan pun kamu membutuhkan data spesifik relasi antar-tabel dari database.`
-      : baseInstruction;
+    const extraCapabilities = [];
+    const activeDeclarations = [];
+    if (hasDb) {
+      extraCapabilities.push(
+        `=== KEMAMPUAN AGENTIC DATABASE (FUNCTION CALLING) ===\n${getDbSchemaDescription()}\nKamu dapat menggunakan tool 'execute_sql_query' kapan pun kamu membutuhkan data spesifik relasi antar-tabel dari database.`
+      );
+      activeDeclarations.push(...databaseAgentTools[0].functionDeclarations);
+    }
+    if (hasWebSearch) {
+      extraCapabilities.push(
+        `=== KEMAMPUAN AGENTIC WEB SEARCH (SUMBER 3 - TAVILY) ===\nJika kamu menganalisis gambar atau pertanyaan tentang SMK di Malang yang belum lengkap di Sumber 1 (Database) dan Sumber 2 (Dokumen Panduan), panggil tool 'search_web_info' untuk mencari data terbarunya di web.`
+      );
+      activeDeclarations.push(webSearchAgentToolDeclaration);
+    }
+
+    const fullSystemInstruction =
+      extraCapabilities.length > 0
+        ? `${baseInstruction}\n\n${extraCapabilities.join("\n\n")}`
+        : baseInstruction;
 
     const modelOptions = {
       model: MODEL_NAME,
       systemInstruction: fullSystemInstruction,
     };
-    if (hasDb) {
-      modelOptions.tools = databaseAgentTools;
+    if (activeDeclarations.length > 0) {
+      modelOptions.tools = [{ functionDeclarations: activeDeclarations }];
     }
 
     const controller = new AbortController();
@@ -223,6 +299,18 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
                   functionResponse: {
                     name: call.name,
                     response: queryResult,
+                  },
+                });
+              } else if (call.name === "search_web_info" && call.args?.query) {
+                console.log(`[WebSearchAgent] Mencari informasi web: ${call.args.query}`);
+                const webRes = await searchWebFallback(call.args.query);
+                const formattedWeb = webRes ? formatTavilyResults(webRes) : "";
+                functionResponses.push({
+                  functionResponse: {
+                    name: call.name,
+                    response: formattedWeb
+                      ? { success: true, results: formattedWeb }
+                      : { success: false, message: "Tidak ditemukan hasil web tambahan." },
                   },
                 });
               } else {

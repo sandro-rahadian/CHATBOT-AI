@@ -1,4 +1,4 @@
-// src/ai/tools.js — Definisi Tools Function Calling untuk Gemini Database Agent
+// src/ai/tools.js — Definisi Tools Function Calling untuk Gemini Database & Web Agent
 export const databaseAgentTools = [
   {
     functionDeclarations: [
@@ -19,3 +19,18 @@ export const databaseAgentTools = [
     ],
   },
 ];
+
+export const webSearchAgentToolDeclaration = {
+  name: "search_web_info",
+  description: "Mencari informasi terbaru di web (Tavily) mengenai SMK di Malang (profil, jurusan, PPDB, alamat, kegiatan, atau detail yang ditemukan pada gambar) jika tidak lengkap di database atau dokumen panduan.",
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      query: {
+        type: "STRING",
+        description: "Kata kunci pencarian web yang spesifik terkait SMK di Malang (contoh: 'SMKN 1 Malang jurusan PPDB terbaru').",
+      },
+    },
+    required: ["query"],
+  },
+};
