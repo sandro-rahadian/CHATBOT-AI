@@ -814,7 +814,15 @@ test("Hard Guardrail: Menolak permintaan kode program, snippet kode, & prompt in
     const promptJson = await resPrompt.json();
     assert.match(promptJson.reply, /tidak dapat membuat atau memproses kode program/i);
 
-    // 4. Pertanyaan sah tentang jurusan RPL tetap diizinkan
+    // 4. Pertanyaan campuran (info SMK sah + minta kode HTML) -> diloloskan ke LLM agar jawab info SMK & tolak kodenya
+    const resMixed = await postAuth({
+      message: "dimana alamat smk 4, buatkan landing page berbasis html",
+    });
+    assert.equal(resMixed.status, 200);
+    const mixedJson = await resMixed.json();
+    assert.match(mixedJson.reply, /Echo:/);
+
+    // 5. Pertanyaan sah tentang jurusan RPL tetap diizinkan
     const resLegit = await postAuth({
       message: "Apa saja yang dipelajari di jurusan RPL SMK Telkom Malang?",
     });
