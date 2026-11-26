@@ -27,6 +27,8 @@ import {
   getCachedKnowledgeItems,
   setCachedKnowledgeItems,
   cleanMarkdownOutput,
+  isDisallowedSystemOrCodeRequest,
+  GUARDRAIL_REFUSAL_MESSAGE,
 } from "./ai/knowledge.js";
 import {
   shouldPerformWebSearch,
@@ -391,7 +393,17 @@ export function createApp({
       });
     }
 
-    // 3. Cek Izin Kategori Pertanyaan
+    // 3. Guardrail ketat: Blokir permintaan kode program, injeksi kode, atau probing sistem internal
+    if (isDisallowedSystemOrCodeRequest(parsed.message)) {
+      return res.json({
+        reply: GUARDRAIL_REFUSAL_MESSAGE,
+        role: user.role,
+        sources: [],
+        conversation_id: parsed.conversation_id || null,
+      });
+    }
+
+    // 4. Cek Izin Kategori Pertanyaan
     const detectedCategory = detectQuestionCategory(parsed.message);
     if (detectedCategory && !isCategoryAllowed(detectedCategory, user.allowedCategories)) {
       return res.json({
