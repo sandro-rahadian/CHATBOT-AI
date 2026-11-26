@@ -43,6 +43,11 @@ interface AttachedImage {
   previewUrl: string;
 }
 
+interface GalleryImage {
+  url: string;
+  caption?: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -50,6 +55,7 @@ interface Message {
   timestamp: Date;
   sources?: SourceItem[];
   images?: Array<{ previewUrl: string; mimeType: string; name?: string }>;
+  galleryImages?: GalleryImage[];
   userRole?: string;
   isError?: boolean;
 }
@@ -85,7 +91,13 @@ function TypingIndicator() {
 
 // ─── ChatBubble (MiniMax Minimalist Style) ───────────────────────────────────
 
-function ChatBubble({ message }: { message: Message }) {
+function ChatBubble({
+  message,
+  onPreviewImage,
+}: {
+  message: Message;
+  onPreviewImage?: (img: GalleryImage) => void;
+}) {
   const isUser = message.role === "user";
   const timeStr = message.timestamp.toLocaleTimeString("id-ID", {
     hour: "2-digit",
@@ -175,6 +187,42 @@ function ChatBubble({ message }: { message: Message }) {
           duration={0.35}
         />
 
+        {/* Google Maps-style Horizontal Preview Gallery */}
+        {message.galleryImages && message.galleryImages.length > 0 && (
+          <div className="pt-1.5">
+            <p className="text-[11px] font-medium text-[#737373] mb-1.5">
+              Galeri Foto Terkait
+            </p>
+            <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1.5 chat-scroll">
+              {message.galleryImages.map((img, idx) => (
+                <button
+                  key={`${img.url}-${idx}`}
+                  type="button"
+                  onClick={() => onPreviewImage?.(img)}
+                  className="group/gal relative w-36 h-24 sm:w-40 sm:h-28 rounded-xl overflow-hidden border border-[#E5E5E5] bg-[#F5F5F5] shrink-0 cursor-pointer text-left focus:outline-none"
+                  title={img.caption || "Lihat gambar lebih besar"}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.caption || `Foto ${idx + 1}`}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                    }}
+                    className="w-full h-full object-cover group-hover/gal:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-2 py-1.5">
+                    <p className="text-[10px] text-white font-medium truncate">
+                      {img.caption || "Preview Sekolah"}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-end pt-1">
           <span className="text-[10px] text-[#8C8C8C] font-normal">
             {timeStr}
@@ -195,6 +243,7 @@ export default function ChatPage() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<GalleryImage | null>(null);
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -691,6 +740,7 @@ export default function ChatPage() {
         reply: string;
         role?: string;
         sources?: SourceItem[];
+        images?: GalleryImage[];
         conversation_id?: string;
       } = await response.json();
 
@@ -700,6 +750,7 @@ export default function ChatPage() {
         content: data.reply,
         timestamp: new Date(),
         sources: data.sources || [],
+        galleryImages: Array.isArray(data.images) ? data.images : [],
         userRole: data.role,
       };
 
@@ -757,6 +808,46 @@ export default function ChatPage() {
         onChange={handleFileInputChange}
         className="hidden"
       />
+
+      {/* ── Lightbox Preview untuk Galeri Foto Sekolah ── */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-3xl max-h-[85vh] bg-white rounded-2xl overflow-hidden shadow-2xl border border-[#E5E5E5]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxImage.url}
+                alt={lightboxImage.caption || "Preview Foto"}
+                className="max-h-[75vh] w-auto object-contain block bg-black"
+              />
+              <div className="flex items-center justify-between px-4 py-2.5 bg-white border-t border-[#EDEDED] gap-4">
+                <p className="text-xs text-[#404040] truncate">
+                  {lightboxImage.caption || "Galeri Sekolah"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLightboxImage(null)}
+                  className="px-3 py-1 rounded-lg bg-[#171717] text-white text-xs font-medium cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Antigravity-Style History Pop-up Modal ── */}
       <HistoryModal
@@ -1197,7 +1288,11 @@ export default function ChatPage() {
             >
               <div className="w-full max-w-[760px] mx-auto flex flex-col gap-4 pb-48">
                 {messages.map((msg) => (
-                  <ChatBubble key={msg.id} message={msg} />
+                  <ChatBubble
+                    key={msg.id}
+                    message={msg}
+                    onPreviewImage={(img) => setLightboxImage(img)}
+                  />
                 ))}
 
                 <AnimatePresence>
