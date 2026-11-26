@@ -485,6 +485,20 @@ export default function ChatPage() {
     !apiToken &&
     (!currentUser || currentUser.role === "guest");
 
+  // Auto-resize textarea dengan animasi halus saat teks panjang
+  const isLongPrompt = inputValue.length > 80 || inputValue.includes("\n");
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const minH = 48;
+    const maxH = 220;
+    const nextH = Math.min(Math.max(el.scrollHeight, minH), maxH);
+    el.style.height = `${nextH}px`;
+    el.style.overflowY = el.scrollHeight > maxH ? "auto" : "hidden";
+  }, [inputValue, messages.length]);
+
   // Keyboard shortcut Cmd/Ctrl + K untuk membuka History Pop-up
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -833,7 +847,11 @@ export default function ChatPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 120, damping: 16 }}
-                className="w-full max-w-[720px] bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 p-4 flex flex-col justify-between min-h-[142px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1 relative group outline-none"
+                className={`w-full bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 p-4 flex flex-col justify-between transition-all duration-300 ease-out focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1 relative group outline-none ${
+                  isLongPrompt
+                    ? "max-w-[760px] min-h-[168px] shadow-[0_14px_36px_rgba(0,0,0,0.07)]"
+                    : "max-w-[720px] min-h-[142px] shadow-[0_2px_14px_rgba(0,0,0,0.03)]"
+                }`}
               >
                 {/* Attached Image Previews */}
                 {attachedImages.length > 0 && (
@@ -875,7 +893,7 @@ export default function ChatPage() {
                     disabled={isLoading}
                     placeholder="Ask anything, paste an image, or use / to use Skill..."
                     rows={2}
-                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
+                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none transition-[height] duration-200 ease-out max-h-[220px] chat-scroll"
                   />
                 </div>
 
@@ -1196,7 +1214,11 @@ export default function ChatPage() {
                 initial={{ y: 24, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                className="pointer-events-auto w-full max-w-[760px] bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.13)] hover:-translate-y-1.5 p-3.5 flex flex-col justify-between min-h-[114px] transition-all duration-300 focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.14)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1.5 relative group outline-none"
+                className={`pointer-events-auto w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] hover:shadow-[0_18px_42px_rgba(0,0,0,0.13)] hover:-translate-y-1.5 p-3.5 flex flex-col justify-between transition-all duration-300 ease-out focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.14)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1.5 relative group outline-none ${
+                  isLongPrompt
+                    ? "max-w-[800px] min-h-[144px] shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
+                    : "max-w-[760px] min-h-[114px] shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                }`}
               >
                 {/* Attached Image Previews */}
                 {attachedImages.length > 0 && (
@@ -1238,7 +1260,7 @@ export default function ChatPage() {
                     disabled={isLoading}
                     placeholder="Ask a follow up question or paste an image..."
                     rows={2}
-                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none"
+                    className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none transition-[height] duration-200 ease-out max-h-[220px] chat-scroll"
                   />
                 </div>
 
