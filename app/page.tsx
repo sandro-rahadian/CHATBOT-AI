@@ -497,36 +497,80 @@ export default function ChatPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Proses file gambar (upload file / paste clipboard) menjadi base64 untuk analisis multimodal AI
+  // Proses file gambar (upload file / paste clipboard) dengan kompresi otomatis agar ringan & cepat
   const processImageFiles = useCallback((files: FileList | File[]) => {
     const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-    const maxBytes = 5 * 1024 * 1024; // 5MB per image
+    const maxBytes = 10 * 1024 * 1024; // 10MB raw file limit
     const incoming = Array.from(files).filter((f) => allowed.has(f.type));
     if (incoming.length === 0) return;
 
     incoming.forEach((file) => {
       if (file.size > maxBytes) {
-        setError(`Ukuran gambar "${file.name}" melebihi batas 5MB.`);
+        setError(`Ukuran gambar "${file.name}" melebihi batas 10MB.`);
         return;
       }
+
       const reader = new FileReader();
       reader.onload = () => {
-        const result = typeof reader.result === "string" ? reader.result : "";
-        if (!result) return;
-        const base64 = result.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
-        setAttachedImages((prev) => {
-          if (prev.length >= 4) return prev;
-          return [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              name: file.name || "gambar.png",
-              mimeType: file.type,
-              data: base64,
-              previewUrl: result,
-            },
-          ];
-        });
+        const rawDataUrl = typeof reader.result === "string" ? reader.result : "";
+        if (!rawDataUrl) return;
+
+        // Jangan kompres GIF agar animasi tetap utuh
+        if (file.type === "image/gif") {
+          const base64 = rawDataUrl.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+          setAttachedImages((prev) => {
+            if (prev.length >= 4) return prev;
+            return [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                name: file.name || "gambar.gif",
+                mimeType: file.type,
+                data: base64,
+                previewUrl: rawDataUrl,
+              },
+            ];
+          });
+          return;
+        }
+
+        // Kompres & resize gambar besar (mis. screenshot Retina Mac) via Canvas
+        const img = new window.Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const outputMime = "image/jpeg";
+          const compressedUrl = canvas.toDataURL(outputMime, 0.85);
+          const base64 = compressedUrl.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "");
+
+          setAttachedImages((prev) => {
+            if (prev.length >= 4) return prev;
+            return [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                name: file.name || "gambar.jpg",
+                mimeType: outputMime,
+                data: base64,
+                previewUrl: compressedUrl,
+              },
+            ];
+          });
+        };
+        img.src = rawDataUrl;
       };
       reader.readAsDataURL(file);
     });
