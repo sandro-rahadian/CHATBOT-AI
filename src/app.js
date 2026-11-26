@@ -52,6 +52,8 @@ export function createApp({
 }) {
   const app = express();
 
+  // Percayai reverse proxy (Railway / Cloudflare) agar X-Forwarded-For valid di express-rate-limit
+  app.set("trust proxy", 1);
   app.use(cors(corsOptions));
   app.use(express.json({ limit: "25mb" }));
 

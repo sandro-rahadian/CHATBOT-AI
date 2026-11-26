@@ -5,7 +5,7 @@ import { buildSystemPrompt } from "./knowledge.js";
 import { databaseAgentTools, webSearchAgentToolDeclaration } from "./tools.js";
 import { getDbSchemaDescription, executeDbQueryTool } from "../db/schema.js";
 import { getDbPool } from "../db/pool.js";
-import { searchWebFallback, formatTavilyResults } from "./search.js";
+import { searchWebFallback, formatTavilyResults, saveTavilyToPending } from "./search.js";
 
 /**
  * Ekstraksi teks dari response Gemini secara aman tanpa memicu exception
@@ -304,6 +304,11 @@ export function createGeminiAgentGenerator(defaultSystemInstruction) {
               } else if (call.name === "search_web_info" && call.args?.query) {
                 console.log(`[WebSearchAgent] Mencari informasi web: ${call.args.query}`);
                 const webRes = await searchWebFallback(call.args.query);
+                if (webRes) {
+                  saveTavilyToPending(call.args.query, webRes).catch((err) =>
+                    console.warn("[saveTavilyToPending error]", err?.message ?? err)
+                  );
+                }
                 const formattedWeb = webRes ? formatTavilyResults(webRes) : "";
                 functionResponses.push({
                   functionResponse: {
