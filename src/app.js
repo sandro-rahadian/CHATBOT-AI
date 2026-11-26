@@ -35,6 +35,7 @@ import {
   formatTavilyResults,
   searchWebFallback,
   saveTavilyToPending,
+  extractGalleryImages,
 } from "./ai/search.js";
 import {
   validateChatBody,
@@ -445,16 +446,20 @@ export function createApp({
       const guideDoc = includeGuide ? loadGuideDocument() : "";
 
       // Cek apakah membutuhkan pencarian web Tavily (Sumber 3: guru, admin, atau analisis gambar)
+      // atau jika user menanyakan profil/fasilitas/lokasi sekolah tertentu untuk melengkapi Preview Gallery
       let webResultsText = "";
+      let galleryImages = [];
+      const mentionsSpecificSchool = /\b(smk|smkn|telkom|moklet|grafika)\b/i.test(parsed.message);
       const allowWebSearch =
         typeof searchWeb === "function" &&
-        (user.canWebSearch || hasImages) &&
-        shouldPerformWebSearch(parsed.message);
+        ((user.canWebSearch || hasImages) && shouldPerformWebSearch(parsed.message) ||
+          (Boolean(process.env.TAVILY_API_KEY) && mentionsSpecificSchool));
       if (allowWebSearch) {
         try {
           const tavilyRes = await searchWeb(parsed.message);
           if (tavilyRes) {
             webResultsText = formatTavilyResults(tavilyRes);
+            galleryImages = extractGalleryImages(tavilyRes, "Galeri Sekolah");
 
             // Simpan ke antrean pending (background non-blocking)
             saveTavilyToPending(parsed.message, tavilyRes).catch((err) =>
@@ -521,6 +526,7 @@ export function createApp({
         reply,
         role: user.role,
         sources,
+        images: galleryImages,
         conversation_id: activeConv ? activeConv.id : null,
       });
     } catch (err) {

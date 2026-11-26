@@ -92,6 +92,30 @@ export function formatTavilyResults(response) {
 }
 
 /**
+ * Mengekstrak daftar URL gambar yang valid dari hasil Tavily untuk ditampilkan sebagai Preview Gallery.
+ */
+export function extractGalleryImages(tavilyRes, fallbackTitle = "Galeri Sekolah") {
+  if (!tavilyRes || !Array.isArray(tavilyRes.images)) return [];
+  const seen = new Set();
+  const gallery = [];
+
+  for (const item of tavilyRes.images) {
+    const url = typeof item === "string" ? item : item?.url;
+    const description = typeof item === "object" && item?.description ? item.description : fallbackTitle;
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    gallery.push({
+      url,
+      caption: String(description).slice(0, 90),
+    });
+    if (gallery.length >= 6) break;
+  }
+
+  return gallery;
+}
+
+/**
  * Melakukan pencarian web menggunakan SDK Tavily.
  */
 export async function searchWebFallback(query, client = getTavilyClient()) {
@@ -108,6 +132,8 @@ export async function searchWebFallback(query, client = getTavilyClient()) {
         searchDepth: "basic",
         maxResults: 3,
         includeAnswer: true,
+        includeImages: true,
+        includeImageDescriptions: true,
       }),
       new Promise((_, reject) => {
         controller.signal.addEventListener("abort", () => {
