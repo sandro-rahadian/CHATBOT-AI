@@ -14,7 +14,6 @@ import {
 import { HistoryModal } from "@/components/history-modal";
 
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
-import { CurvedCarousel } from "@/components/ui/curved-carousel";
 import { useSmoothScroll } from "@/components/ui/smooth-scroll";
 import {
   getSessionStatus,
@@ -243,6 +242,8 @@ export default function ChatPage() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isGuestLoginModalOpen, setIsGuestLoginModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<GalleryImage | null>(null);
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -671,9 +672,9 @@ export default function ChatPage() {
     isUserScrolledUp.current = false;
     const activeToken = apiToken || getStoredToken();
 
-    // Strict Login Guard: Guest cannot send chat messages -> trigger bottom sidebar login menu
+    // Strict Login Guard: Guest cannot send chat messages -> trigger blurred login modal
     if (!activeToken && (!currentUser || currentUser.role === "guest")) {
-      setIsProfileMenuOpen(true);
+      setIsGuestLoginModalOpen(true);
       return;
     }
 
@@ -809,6 +810,76 @@ export default function ChatPage() {
         className="hidden"
       />
 
+      {/* ── Blurred Guest Login Pop-up Modal ── */}
+      <AnimatePresence>
+        {isGuestLoginModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setIsGuestLoginModalOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-md p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Masuk untuk Memulai Chat"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-[380px] bg-white rounded-3xl border border-[#EDEDED] shadow-2xl px-7 py-8 text-center text-[#171717]"
+            >
+              <button
+                type="button"
+                onClick={() => setIsGuestLoginModalOpen(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full text-[#737373] hover:text-[#171717] hover:bg-[#F5F5F5] transition-colors cursor-pointer"
+                aria-label="Tutup"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-[#F5F5F5] border border-[#EDEDED] flex items-center justify-center overflow-hidden p-2">
+                <Image
+                  src="/logo-v2.png"
+                  alt="KeraVokasi"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-contain"
+                  unoptimized
+                />
+              </div>
+
+              <h2 className="text-lg font-semibold text-[#171717]">
+                Masuk untuk Memulai Chat
+              </h2>
+              <p className="text-xs text-[#737373] leading-relaxed mt-1.5 mb-6">
+                Anda saat ini berada dalam mode Tamu. Silakan masuk atau buat akun baru untuk mulai bertanya dan menyimpan riwayat percakapan Anda.
+              </p>
+
+              <div className="flex flex-col gap-2.5">
+                <Link
+                  href="/login"
+                  className="w-full h-11 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>Masuk Sekarang</span>
+                </Link>
+                <Link
+                  href="/signup"
+                  className="w-full h-11 rounded-full bg-[#F7F7F8] hover:bg-[#EDEDEE] border border-[#E5E5E5] text-[#171717] text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>Daftar Akun</span>
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Lightbox Preview untuk Galeri Foto Sekolah ── */}
       <AnimatePresence>
         {lightboxImage && (
@@ -904,43 +975,45 @@ export default function ChatPage() {
         )}
 
         {messages.length === 0 ? (
-          /* ── MiniMax Code Hero & Empty State ── */
-          <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-12 pb-6">
-            <div className="w-full flex flex-col items-center justify-center">
-              {/* Primary Hero Title with Codigo Staggered Character Slide-Up Transition */}
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-[28px] sm:text-[34px] font-semibold text-[#171717] tracking-[-0.02em] text-center mb-7 flex items-center justify-center flex-wrap"
+          /* ── MiniMax Code Hero & Empty State (Template Layout) ── */
+          <div className="flex-1 flex flex-col items-center justify-center px-4 w-full max-w-5xl mx-auto my-auto pt-8 pb-10">
+            <div className="w-full max-w-[720px] flex flex-col items-start justify-center">
+              {/* Greeting Line */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-2 text-[15px] font-medium text-[#525252] mb-1.5"
               >
-                {"Sebaiknya kita mulai dari mana?".split("").map((char, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: i * 0.025,
-                      duration: 0.35,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    style={{
-                      display: "inline-block",
-                      whiteSpace: char === " " ? "pre" : "normal",
-                    }}
-                  >
-                    {char}
-                  </motion.span>
-                ))}
+                <svg className="w-4 h-4 text-[#171717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+                <span>Hi, {currentUser?.username || "Teman Vokasi"}</span>
+              </motion.div>
+
+              {/* Primary Hero Title */}
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.05 }}
+                className="text-[28px] sm:text-[34px] font-semibold text-[#171717] tracking-[-0.02em] text-left mb-6"
+              >
+                Sebaiknya kita mulai dari mana?
               </motion.h1>
 
-              {/* Omnibox Interactive Container with Codigo Elevation & Spring Transitions */}
+              {/* Omnibox Interactive Container */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 120, damping: 16 }}
-                className={`w-full bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 p-4 flex flex-col justify-between transition-all duration-300 ease-out focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.09)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1 relative group outline-none ${
+                className={`w-full bg-white rounded-2xl sm:rounded-[24px] border border-[#EDEDED] p-4 flex flex-col justify-between transition-[max-width,min-height] duration-300 ease-out focus-within:border-[#EDEDED] focus-within:outline-none relative group outline-none ${
                   isLongPrompt
-                    ? "max-w-[760px] min-h-[168px] shadow-[0_14px_36px_rgba(0,0,0,0.07)]"
+                    ? "max-w-[760px] min-h-[168px] shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
                     : "max-w-[720px] min-h-[142px] shadow-[0_2px_14px_rgba(0,0,0,0.03)]"
                 }`}
               >
@@ -982,7 +1055,7 @@ export default function ChatPage() {
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
                     disabled={isLoading}
-                    placeholder="Ask anything, paste an image, or use / to use Skill..."
+                    placeholder="Ask anything"
                     rows={2}
                     className="w-full bg-transparent border-0 p-0 text-[14px] text-[#171717] placeholder-[#9E9E9E] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none resize-none font-normal leading-relaxed outline-none transition-[height] duration-200 ease-out max-h-[220px] chat-scroll"
                   />
@@ -1172,108 +1245,142 @@ export default function ChatPage() {
                 </div>
               </motion.div>
 
-              {/* Quick Action Suggestion Chips with Codigo Staggered Entrance */}
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs">
+              {/* Clean Minimalist Quick Action Links (Matching ai-chat-landing Template) */}
+              <div className="flex flex-wrap items-center gap-6 mt-5 px-2 text-[13px] text-[#525252]">
                 {[
                   {
-                    title: "Jurusan Populer",
-                    query: "Rekomendasikan jurusan SMK berbasis teknologi dan multimedia di Malang",
-                    badge: "New",
-                    badgeColor: "bg-[#EBF5FF] text-[#2563EB]",
+                    id: "jurusan",
+                    title: "Jurusan",
                     icon: (
-                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <rect height="18" rx="2" strokeWidth="1.7" width="18" x="3" y="3" />
-                        <circle cx="8.5" cy="8.5" r="1.5" strokeWidth="1.7" />
-                        <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      <svg className="w-4 h-4 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
                       </svg>
                     ),
                   },
                   {
-                    title: "Jalur PPDB",
-                    query: "Bagaimana alur pendaftaran dan jadwal PPDB SMK Malang tahun ini?",
-                    badge: "H3",
-                    badgeColor: "bg-[#F3E8FF] text-[#9333EA]",
+                    id: "ppdb",
+                    title: "PPDB",
                     icon: (
-                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    title: "Syarat Berkas",
-                    query: "Apa saja syarat berkas pendaftaran PPDB SMK Malang?",
-                    icon: (
-                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
                       </svg>
                     ),
                   },
                   {
-                    title: "Daftar SMK",
-                    query: "Berikan daftar SMK Negeri dan Swasta terbaik di Kota Malang",
+                    id: "fasilitas",
+                    title: "Fasilitas",
                     icon: (
-                      <svg className="w-3.5 h-3.5 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <rect height="14" rx="2" strokeWidth="1.7" width="20" x="2" y="3" />
-                        <path d="M8 21h8m-4-4v4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      <svg className="w-4 h-4 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
                       </svg>
                     ),
                   },
-                ].map((chip, idx) => (
-                  <motion.button
-                    key={chip.title}
-                    type="button"
-                    initial={{ opacity: 0, y: 10 }}
+                  {
+                    id: "sekolah",
+                    title: "Daftar SMK",
+                    icon: (
+                      <svg className="w-4 h-4 text-[#737373]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+                      </svg>
+                    ),
+                  },
+                ].map((item) => {
+                  const isActive = selectedCategory === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedCategory((prev) => (prev === item.id ? null : item.id))
+                      }
+                      className={`flex items-center gap-2 py-1 px-2 rounded-lg transition-colors cursor-pointer ${
+                        isActive
+                          ? "bg-[#EDEDEE] text-[#171717] font-medium"
+                          : "text-[#525252] hover:text-[#171717]"
+                      }`}
+                    >
+                      {item.icon}
+                      <span>{item.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Suggestion Cards (shown when a category is selected, matching ai-chat-landing) */}
+              <AnimatePresence>
+                {selectedCategory && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: 0.25 + idx * 0.04,
-                      duration: 0.35,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    whileHover={{ y: -2, scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleSend(chip.query)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] hover:border-[#D4D4D4] shadow-xs transition-colors cursor-pointer"
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.18 }}
+                    className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4"
                   >
-                    {chip.icon}
-                    <span>{chip.title}</span>
-                    {chip.badge && (
-                      <span className={`${chip.badgeColor} text-[10px] font-medium px-1.5 py-0.2 rounded-md`}>
-                        {chip.badge}
-                      </span>
-                    )}
-                  </motion.button>
-                ))}
-
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.42, duration: 0.35 }}
-                  whileHover={{ y: -2, scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setInputValue("Jelaskan prospek kerja lulusan SMK jurusan ")}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] text-[#525252] hover:text-[#171717] shadow-xs transition-colors cursor-pointer"
-                >
-                  <span>More</span>
-                </motion.button>
-              </div>
-
-              {/* ── Curved Carousel Showcase (Framer Curved Carousel Component) ── */}
-              <div className="w-full mt-7 flex justify-center overflow-hidden">
-                <CurvedCarousel
-                  curve={0.35}
-                  speed={28}
-                  cardWidth={190}
-                  cardHeight={250}
-                  gap={20}
-                  radius={16}
-                  height={290}
-                  width="100%"
-                  paper="#FFFFFF"
-                  cardBorder="rgba(0, 0, 0, 0.08)"
-                  captionFade={0.65}
-                />
-              </div>
+                    {(
+                      {
+                        jurusan: [
+                          {
+                            heading: "Jurusan IT & RPL",
+                            body: "Rekomendasi jurusan coding, jaringan, dan multimedia di Malang",
+                            prompt: "Rekomendasikan jurusan SMK berbasis teknologi dan multimedia di Malang",
+                          },
+                          {
+                            heading: "Perbedaan RPL vs TKJ",
+                            body: "Bandingkan fokus belajar dan prospek kerja kedua jurusan",
+                            prompt: "Apa perbedaan jurusan RPL dan TKJ di SMK Malang?",
+                          },
+                        ],
+                        ppdb: [
+                          {
+                            heading: "Alur & Jadwal PPDB",
+                            body: "Informasi lengkap jalur masuk dan jadwal pendaftaran SMK",
+                            prompt: "Bagaimana alur pendaftaran dan jadwal PPDB SMK Malang?",
+                          },
+                          {
+                            heading: "Syarat Berkas PPDB",
+                            body: "Daftar dokumen yang perlu disiapkan saat mendaftar",
+                            prompt: "Apa saja syarat berkas pendaftaran PPDB SMK Malang?",
+                          },
+                        ],
+                        fasilitas: [
+                          {
+                            heading: "Fasilitas SMK Telkom",
+                            body: "Lihat lab komputer, studio, dan sarana praktik di Moklet",
+                            prompt: "Apa saja fasilitas yang ada di SMK Telkom Malang?",
+                          },
+                          {
+                            heading: "Fasilitas SMKN 4 Malang",
+                            body: "Bengkel grafika, lab desain, dan studio produksi",
+                            prompt: "Apa saja fasilitas di SMKN 4 Malang?",
+                          },
+                        ],
+                        sekolah: [
+                          {
+                            heading: "Daftar SMK di Malang",
+                            body: "Profil singkat SMK Negeri & Swasta unggulan di Kota Malang",
+                            prompt: "Berikan daftar SMK Negeri dan Swasta terbaik di Kota Malang",
+                          },
+                          {
+                            heading: "Alamat & Kontak Resmi",
+                            body: "Lokasi, nomor telepon, dan website resmi sekolah",
+                            prompt: "Dimana alamat dan kontak resmi SMK Telkom Malang dan SMKN 4 Malang?",
+                          },
+                        ],
+                      }[selectedCategory] || []
+                    ).map((card) => (
+                      <button
+                        key={card.heading}
+                        type="button"
+                        onClick={() => handleSend(card.prompt)}
+                        className="text-left p-3.5 rounded-xl border border-[#EDEDED] bg-white hover:bg-[#FAFAFA] hover:border-[#D4D4D4] transition-colors cursor-pointer"
+                      >
+                        <p className="text-xs font-semibold text-[#171717]">{card.heading}</p>
+                        <p className="text-[11px] text-[#737373] mt-0.5 line-clamp-2">{card.body}</p>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         ) : (
@@ -1309,9 +1416,9 @@ export default function ChatPage() {
                 initial={{ y: 24, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                className={`pointer-events-auto w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] hover:shadow-[0_18px_42px_rgba(0,0,0,0.13)] hover:-translate-y-1.5 p-3.5 flex flex-col justify-between transition-all duration-300 ease-out focus-within:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.14)] focus-within:border-[#EDEDED] focus-within:outline-none focus-within:-translate-y-1.5 relative group outline-none ${
+                className={`pointer-events-auto w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-[#EDEDED] p-3.5 flex flex-col justify-between transition-[max-width,min-height] duration-300 ease-out focus-within:border-[#EDEDED] focus-within:outline-none relative group outline-none ${
                   isLongPrompt
-                    ? "max-w-[800px] min-h-[144px] shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
+                    ? "max-w-[800px] min-h-[144px] shadow-[0_12px_32px_rgba(0,0,0,0.1)]"
                     : "max-w-[760px] min-h-[114px] shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
                 }`}
               >
